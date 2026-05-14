@@ -10,7 +10,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051402;           // YYYYMMDDXX. Bumped: added settings.php.
+$plugin->version   = 2026051403;           // YYYYMMDDXX. Added install.xml (3 tables).
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_ALPHA;       // Pre-MVP.
-$plugin->release   = 'v0.1.1-alpha';
+$plugin->release   = 'v0.1.2-alpha';

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/aigrader/db" VERSION="2026051403" COMMENT="DB schema for local_aigrader plugin (AI Grader Pro).">
+  <TABLES>
+
+    <TABLE NAME="local_aigrader_assign" COMMENT="Per-assignment configuration: which assignments have AI Grader Pro enabled, evaluation criteria written by the teacher, and per-assignment overrides for model/language.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="assignid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="FK to {assign}.id. Unique: one config per assignment."/>
+        <FIELD NAME="enabled" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="1 = AI Grader Pro active on this assignment."/>
+        <FIELD NAME="criteria_text" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Evaluation criteria written by the teacher in natural language. Required to enable."/>
+        <FIELD NAME="source" TYPE="char" LENGTH="32" NOTNULL="true" DEFAULT="manual" SEQUENCE="false" COMMENT="Origin of criteria_text: manual | rubric_imported | rubric_edited"/>
+        <FIELD NAME="model_override" TYPE="char" LENGTH="128" NOTNULL="false" SEQUENCE="false" COMMENT="If set, overrides the AI Subsystem default model for this assignment."/>
+        <FIELD NAME="language_override" TYPE="char" LENGTH="8" NOTNULL="false" SEQUENCE="false" COMMENT="If set, overrides course language for feedback (ISO code, e.g. es, en, pt)."/>
+        <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="FK to {user}.id of teacher who last edited config."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="assignid_unique" TYPE="unique" FIELDS="assignid"/>
+        <KEY NAME="assignid_fk" TYPE="foreign" FIELDS="assignid" REFTABLE="assign" REFFIELDS="id"/>
+        <KEY NAME="usermodified_fk" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+    </TABLE>
+
+    <TABLE NAME="local_aigrader_submission" COMMENT="Tracks AI grading proposal state per assignment submission. The proposal lives here in 'ai_proposed' state until the teacher reviews and approves, at which point the grade is migrated to {assign_grades}. Nothing in this table is ever shown to the student.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="submissionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="FK to {assign_submission}.id"/>
+        <FIELD NAME="assignid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Denormalised FK to {assign}.id for fast filtering."/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Denormalised FK to {course}.id."/>
+        <FIELD NAME="studentid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="FK to {user}.id of the student whose submission this is."/>
+        <FIELD NAME="status" TYPE="char" LENGTH="32" NOTNULL="true" DEFAULT="pending_ai" SEQUENCE="false" COMMENT="State machine: pending_ai | ai_proposed | teacher_reviewed | published | error | unsupported_format"/>
+        <FIELD NAME="proposed_grade" TYPE="number" LENGTH="10" NOTNULL="false" SEQUENCE="false" DECIMALS="4" COMMENT="Grade proposed by the LLM (0-100 scale by default)."/>
+        <FIELD NAME="proposed_feedback" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Full LLM response as JSON: criterion_scores, strengths, improvements, justification."/>
+        <FIELD NAME="final_grade" TYPE="number" LENGTH="10" NOTNULL="false" SEQUENCE="false" DECIMALS="4" COMMENT="Grade after teacher review. May equal proposed_grade if teacher just approved."/>
+        <FIELD NAME="final_feedback" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Feedback published to student. May equal proposed_feedback if teacher just approved."/>
+        <FIELD NAME="final_grader" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="FK to {user}.id of the teacher who approved/published."/>
+        <FIELD NAME="error_message" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="If status=error or unsupported_format, the human-readable reason."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timeprocessed" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="When the LLM call completed and status became ai_proposed (or error)."/>
+        <FIELD NAME="timepublished" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="When teacher approved and grade was migrated to {assign_grades}."/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="submissionid_unique" TYPE="unique" FIELDS="submissionid" COMMENT="One AI grading record per submission."/>
+        <KEY NAME="submissionid_fk" TYPE="foreign" FIELDS="submissionid" REFTABLE="assign_submission" REFFIELDS="id"/>
+        <KEY NAME="assignid_fk" TYPE="foreign" FIELDS="assignid" REFTABLE="assign" REFFIELDS="id"/>
+        <KEY NAME="courseid_fk" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+        <KEY NAME="studentid_fk" TYPE="foreign" FIELDS="studentid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="final_grader_fk" TYPE="foreign" FIELDS="final_grader" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="status_ix" UNIQUE="false" FIELDS="status" COMMENT="Fast filtering for adhoc task queue."/>
+        <INDEX NAME="assignid_ix" UNIQUE="false" FIELDS="assignid"/>
+        <INDEX NAME="courseid_ix" UNIQUE="false" FIELDS="courseid"/>
+      </INDEXES>
+    </TABLE>
+
+    <TABLE NAME="local_aigrader_log" COMMENT="Append-only audit log of every AI grading action: prompts sent to the LLM, responses received, teacher edits applied. Required by GDPR (data subject right of access) and AI Act (high-risk system record-keeping).">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="submissionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="FK to {assign_submission}.id"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="FK to {user}.id of teacher who triggered the action."/>
+        <FIELD NAME="studentid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="FK to {user}.id of the student whose submission was processed."/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="action" TYPE="char" LENGTH="32" NOTNULL="true" SEQUENCE="false" COMMENT="grade | regrade | edit | approve | reject"/>
+        <FIELD NAME="llm_provider" TYPE="char" LENGTH="64" NOTNULL="false" SEQUENCE="false" COMMENT="Moodle AI Subsystem provider name (openai, azureai, ...)."/>
+        <FIELD NAME="llm_model" TYPE="char" LENGTH="128" NOTNULL="false" SEQUENCE="false" COMMENT="Model identifier as configured in the provider."/>
+        <FIELD NAME="prompt_hash" TYPE="char" LENGTH="64" NOTNULL="false" SEQUENCE="false" COMMENT="SHA-256 of the full prompt for deduplication and cache lookups."/>
+        <FIELD NAME="prompt_text" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Full prompt sent to the LLM. v0.2 will encrypt at-rest."/>
+        <FIELD NAME="response_json" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Raw response from the LLM (parsed JSON object as string)."/>
+        <FIELD NAME="tokens_input" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="tokens_output" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="cost_usd" TYPE="number" LENGTH="10" NOTNULL="false" SEQUENCE="false" DECIMALS="6"/>
+        <FIELD NAME="duration_ms" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="proposed_grade" TYPE="number" LENGTH="10" NOTNULL="false" SEQUENCE="false" DECIMALS="4"/>
+        <FIELD NAME="final_grade" TYPE="number" LENGTH="10" NOTNULL="false" SEQUENCE="false" DECIMALS="4" COMMENT="If action=approve or edit, the grade actually published."/>
+        <FIELD NAME="teacher_edits" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON diff between proposed and final (only present for action=edit)."/>
+        <FIELD NAME="submission_format" TYPE="char" LENGTH="32" NOTNULL="false" SEQUENCE="false" COMMENT="onlinetext | docx | code | zip | ipynb | mixed | unsupported"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="submissionid_fk" TYPE="foreign" FIELDS="submissionid" REFTABLE="assign_submission" REFFIELDS="id"/>
+        <KEY NAME="userid_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="studentid_fk" TYPE="foreign" FIELDS="studentid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="courseid_fk" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="submissionid_ix" UNIQUE="false" FIELDS="submissionid"/>
+        <INDEX NAME="userid_ix" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="courseid_ix" UNIQUE="false" FIELDS="courseid"/>
+        <INDEX NAME="timecreated_ix" UNIQUE="false" FIELDS="timecreated"/>
+        <INDEX NAME="prompt_hash_ix" UNIQUE="false" FIELDS="prompt_hash"/>
+      </INDEXES>
+    </TABLE>
+
+  </TABLES>
+</XMLDB>
