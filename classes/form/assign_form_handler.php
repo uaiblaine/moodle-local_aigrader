@@ -1,0 +1,213 @@
+<?php
+/**
+ * Handler that injects AI Grader Pro fields into mod_assign's edit form
+ * and persists them to local_aigrader_assign.
+ *
+ * @package    local_aigrader
+ * @copyright  2026 Hernán Díaz
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace local_aigrader\form;
+
+use local_aigrader\rubric\importer;
+use stdClass;
+
+defined('MOODLE_INTERNAL') || die();
+
+class assign_form_handler {
+
+    /** @var string Field prefix to avoid collisions with assign's own fields. */
+    private const FIELD_PREFIX = 'aigrader_';
+
+    /**
+     * Add our fields to the mod_form. Called from local_aigrader_coursemodule_standard_elements().
+     */
+    public static function add_elements($formwrapper, \MoodleQuickForm $mform): void {
+        global $DB;
+
+        // Only run on assign mod forms.
+        if (!self::is_assign_form($formwrapper)) {
+            return;
+        }
+
+        // Honour the global enabled toggle from the plugin settings.
+        if (!get_config('local_aigrader', 'enabled')) {
+            return;
+        }
+
+        $current = $formwrapper->get_current();
+        $assignid = isset($current->instance) ? (int) $current->instance : 0;
+        $cmid     = isset($current->coursemodule) ? (int) $current->coursemodule : 0;
+
+        $existing = $assignid
+            ? $DB->get_record('local_aigrader_assign', ['assignid' => $assignid])
+            : null;
+
+        // Section header.
+        $mform->addElement(
+            'header',
+            self::FIELD_PREFIX . 'header',
+            get_string('pluginname', 'local_aigrader')
+        );
+        $mform->setExpanded(self::FIELD_PREFIX . 'header', false);
+
+        // Enable toggle.
+        $mform->addElement(
+            'advcheckbox',
+            self::FIELD_PREFIX . 'enabled',
+            get_string('form_enabled', 'local_aigrader')
+        );
+        $mform->addHelpButton(self::FIELD_PREFIX . 'enabled', 'form_enabled', 'local_aigrader');
+        $mform->setDefault(self::FIELD_PREFIX . 'enabled', $existing->enabled ?? 0);
+
+        // Criteria textarea.
+        $mform->addElement(
+            'textarea',
+            self::FIELD_PREFIX . 'criteria',
+            get_string('form_criteria', 'local_aigrader'),
+            ['rows' => 12, 'cols' => 70, 'style' => 'font-family: monospace;']
+        );
+        $mform->setType(self::FIELD_PREFIX . 'criteria', PARAM_RAW);
+        $mform->addHelpButton(self::FIELD_PREFIX . 'criteria', 'form_criteria', 'local_aigrader');
+
+        // Pre-fill criteria from existing config, OR from gradingform_rubric if auto-import enabled.
+        $criteriadefault = $existing->criteria_text ?? '';
+        $source = $existing->source ?? 'manual';
+        if ($criteriadefault === '' && $cmid && get_config('local_aigrader', 'rubric_autoimport')) {
+            $imported = importer::import_for_cmid($cmid);
+            if ($imported !== null) {
+                $criteriadefault = $imported;
+                $source = 'rubric_imported';
+                // Show a hint to the teacher.
+                $mform->addElement(
+                    'static',
+                    self::FIELD_PREFIX . 'rubric_notice',
+                    '',
+                    \html_writer::div(
+                        get_string('form_criteria_imported_notice', 'local_aigrader'),
+                        'alert alert-info'
+                    )
+                );
+            }
+        }
+        $mform->setDefault(self::FIELD_PREFIX . 'criteria', $criteriadefault);
+
+        // Track source as hidden field (UI users don't set it, code does).
+        $mform->addElement('hidden', self::FIELD_PREFIX . 'source', $source);
+        $mform->setType(self::FIELD_PREFIX . 'source', PARAM_ALPHANUMEXT);
+
+        // Model override (optional).
+        $mform->addElement(
+            'text',
+            self::FIELD_PREFIX . 'model_override',
+            get_string('form_model_override', 'local_aigrader'),
+            ['maxlength' => 128, 'size' => 40]
+        );
+        $mform->setType(self::FIELD_PREFIX . 'model_override', PARAM_TEXT);
+        $mform->addHelpButton(self::FIELD_PREFIX . 'model_override', 'form_model_override', 'local_aigrader');
+        $mform->setDefault(self::FIELD_PREFIX . 'model_override', $existing->model_override ?? '');
+
+        // Language override (optional).
+        $langoptions = ['' => get_string('form_lang_auto', 'local_aigrader')];
+        foreach (get_string_manager()->get_list_of_translations() as $code => $name) {
+            $langoptions[$code] = $name;
+        }
+        $mform->addElement(
+            'select',
+            self::FIELD_PREFIX . 'language_override',
+            get_string('form_language_override', 'local_aigrader'),
+            $langoptions
+        );
+        $mform->addHelpButton(self::FIELD_PREFIX . 'language_override', 'form_language_override', 'local_aigrader');
+        $mform->setDefault(self::FIELD_PREFIX . 'language_override', $existing->language_override ?? '');
+
+        // Only show the rest of fields if enabled. Cosmetic hideIf.
+        $mform->hideIf(self::FIELD_PREFIX . 'criteria', self::FIELD_PREFIX . 'enabled', 'notchecked');
+        $mform->hideIf(self::FIELD_PREFIX . 'model_override', self::FIELD_PREFIX . 'enabled', 'notchecked');
+        $mform->hideIf(self::FIELD_PREFIX . 'language_override', self::FIELD_PREFIX . 'enabled', 'notchecked');
+    }
+
+    /**
+     * Validate the submitted form data.
+     */
+    public static function validate($formwrapper, array $data): array {
+        $errors = [];
+        if (!self::is_assign_form($formwrapper)) {
+            return $errors;
+        }
+        if (!get_config('local_aigrader', 'enabled')) {
+            return $errors;
+        }
+
+        $enabled = !empty($data[self::FIELD_PREFIX . 'enabled']);
+        $criteria = trim($data[self::FIELD_PREFIX . 'criteria'] ?? '');
+
+        if ($enabled && $criteria === '') {
+            $errors[self::FIELD_PREFIX . 'criteria'] = get_string('error_criteria_required', 'local_aigrader');
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Persist the form data to local_aigrader_assign after the assignment is saved.
+     */
+    public static function save($moduleinfo, $course) {
+        global $DB, $USER;
+
+        if (($moduleinfo->modulename ?? '') !== 'assign') {
+            return $moduleinfo;
+        }
+        if (!get_config('local_aigrader', 'enabled')) {
+            return $moduleinfo;
+        }
+
+        $assignid = isset($moduleinfo->instance) ? (int) $moduleinfo->instance : 0;
+        if (!$assignid) {
+            return $moduleinfo;
+        }
+
+        $now = time();
+        $enabled = !empty($moduleinfo->{self::FIELD_PREFIX . 'enabled'}) ? 1 : 0;
+        $criteria = trim($moduleinfo->{self::FIELD_PREFIX . 'criteria'} ?? '');
+        $source = $moduleinfo->{self::FIELD_PREFIX . 'source'} ?? 'manual';
+        $modeloverride = trim($moduleinfo->{self::FIELD_PREFIX . 'model_override'} ?? '');
+        $languageoverride = $moduleinfo->{self::FIELD_PREFIX . 'language_override'} ?? '';
+
+        $existing = $DB->get_record('local_aigrader_assign', ['assignid' => $assignid]);
+
+        // If the teacher edited the auto-imported criteria, flag the source as rubric_edited.
+        if ($existing && $existing->source === 'rubric_imported' && $existing->criteria_text !== $criteria) {
+            $source = 'rubric_edited';
+        }
+
+        $record = new stdClass();
+        $record->assignid = $assignid;
+        $record->enabled = $enabled;
+        $record->criteria_text = $criteria;
+        $record->source = $source ?: 'manual';
+        $record->model_override = $modeloverride !== '' ? $modeloverride : null;
+        $record->language_override = $languageoverride !== '' ? $languageoverride : null;
+        $record->usermodified = $USER->id;
+        $record->timemodified = $now;
+
+        if ($existing) {
+            $record->id = $existing->id;
+            $DB->update_record('local_aigrader_assign', $record);
+        } else {
+            $record->timecreated = $now;
+            $DB->insert_record('local_aigrader_assign', $record);
+        }
+
+        return $moduleinfo;
+    }
+
+    /**
+     * Returns true if the form being built is the mod_assign edit form.
+     */
+    private static function is_assign_form($formwrapper): bool {
+        $current = $formwrapper->get_current();
+        return isset($current->modulename) && $current->modulename === 'assign';
+    }
+}

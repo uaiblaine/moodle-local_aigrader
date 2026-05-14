@@ -26,5 +26,36 @@ $string['setting_rubric_autoimport_desc'] = 'Cuando una tarea usa el método de 
 $string['setting_default_system_prompt'] = 'Prompt de sistema por defecto';
 $string['setting_default_system_prompt_desc'] = 'Instrucción institucional opcional que se añade al system prompt de cada solicitud de calificación. Útil para imponer tono o política consistentes entre todos los profesores. Ejemplo: "Aporta feedback constructivo en registro académico, máximo 200 palabras." Déjalo vacío para usar solo el system prompt por defecto del plugin.';
 
+// Form de edición de la tarea (mod_assign).
+$string['form_enabled'] = 'Habilitar calificación asistida por IA en esta tarea';
+$string['form_enabled_help'] = 'Cuando está marcado, los profesores pueden lanzar AI Grader Pro sobre las entregas de esta tarea. La IA propone nota y feedback; el profesor revisa y decide. Nada se publica al alumno hasta que el profesor aprueba.';
+
+$string['form_criteria'] = 'Criterios de evaluación';
+$string['form_criteria_help'] = 'Descripción en lenguaje natural de cómo debe evaluar la IA las entregas de esta tarea. Escribe las mismas instrucciones que darías a un becario. Menciona los criterios concretos, su peso relativo, y el tono de feedback que quieres. Ejemplo:
+
+Evalúa este ensayo (800-1000 palabras) sobre digitalización educativa según estos criterios:
+- Claridad de la tesis (25%): ¿es la postura defendible?
+- Calidad de evidencias (30%): ¿las fuentes son académicas y bien citadas?
+- Estructura (25%): introducción, desarrollo, conclusión
+- Lenguaje (20%): registro académico, ortografía
+
+Tono: constructivo y específico, en español.';
+
+$string['form_criteria_imported_notice'] = 'Criterios pre-rellenados desde la rúbrica configurada en "Calificación > Calificación avanzada". Puedes editarlos antes de habilitar la calificación IA.';
+
+$string['form_model_override'] = 'Modelo (opcional)';
+$string['form_model_override_help'] = 'Si lo defines, esta tarea usa este modelo específico en lugar del default del provider IA. Útil cuando quieres un modelo más capaz (o más barato) para una tarea concreta. Déjalo vacío para usar el default global.';
+
+$string['form_language_override'] = 'Idioma del feedback (opcional)';
+$string['form_language_override_help'] = 'Si lo defines, el feedback de la IA para esta tarea irá en este idioma en lugar del idioma del curso. Déjalo en "Auto" para usar el idioma del curso.';
+
+$string['form_lang_auto'] = 'Auto (usar idioma del curso)';
+
+// Errores de validación.
+$string['error_criteria_required'] = 'Los criterios de evaluación son obligatorios cuando la calificación asistida por IA está habilitada. Describe cómo debe evaluar la IA las entregas.';
+
+// Importador de rúbricas.
+$string['rubric_export_header'] = 'Criterios (auto-importados de la rúbrica de calificación avanzada de la tarea):';
+
 // Privacidad.
 $string['privacy:metadata'] = 'AI Grader Pro almacena registros de auditoría de las acciones de calificación asistida por IA, incluyendo prompts enviados al proveedor LLM configurado, respuestas del modelo, notas propuestas y ediciones del profesor. Consulta la documentación del plugin para más detalles.';
