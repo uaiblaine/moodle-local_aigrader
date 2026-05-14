@@ -1,0 +1,444 @@
+<?php
+/**
+ * AI Grader Pro · review page.
+ *
+ * The teacher sees the LLM's proposal in editable form. They can:
+ *   - Approve & Publish: edits (if any) get saved and the grade is written
+ *     to m_assign_grades with grader=USER. This is the physical guarantee
+ *     of human-in-the-loop (per ADR-001 section 3.6): nothing reaches the
+ *     gradebook without a teacher's click.
+ *   - Reject: the AI proposal is marked as reviewed and ignored; the
+ *     teacher will grade manually via Moodle's standard tools.
+ *
+ * URL: /local/aigrader/review.php?submissionid=N
+ *
+ * @package    local_aigrader
+ * @copyright  2026 Hernán Díaz
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+require(__DIR__ . '/../../config.php');
+require_once($CFG->dirroot . '/mod/assign/locallib.php');
+require_once($CFG->dirroot . '/mod/assign/lib.php');
+
+$submissionid = required_param('submissionid', PARAM_INT);
+
+$assignsub = $DB->get_record('assign_submission', ['id' => $submissionid], '*', MUST_EXIST);
+$assign    = $DB->get_record('assign', ['id' => $assignsub->assignment], '*', MUST_EXIST);
+[$course, $cm] = get_course_and_cm_from_instance($assign->id, 'assign');
+$context = context_module::instance($cm->id);
+
+require_login($course, false, $cm);
+require_capability('local/aigrader:use', $context);
+
+$proposalrow = $DB->get_record('local_aigrader_submission',
+    ['submissionid' => $submissionid], '*', MUST_EXIST);
+
+if (!in_array($proposalrow->status, ['ai_proposed', 'teacher_reviewed', 'published'], true)) {
+    throw new \moodle_exception('errornoproposal', 'local_aigrader');
+}
+
+$proposed = json_decode((string) $proposalrow->proposed_feedback, true);
+if (!is_array($proposed)) {
+    throw new \moodle_exception('errorparseproposal', 'local_aigrader');
+}
+
+// If we already published before, prefer the final (edited) feedback for the form defaults.
+$current = $proposalrow->final_feedback
+    ? (json_decode($proposalrow->final_feedback, true) ?: $proposed)
+    : $proposed;
+
+$currentgrade = $proposalrow->final_grade ?? ($proposed['final_grade'] ?? 0);
+
+// ---------------------------------------------------------------------
+// Handle POST.
+// ---------------------------------------------------------------------
+$action = optional_param('action', '', PARAM_ALPHA);
+if ($action && data_submitted()) {
+    require_sesskey();
+
+    if ($action === 'reject') {
+        $DB->update_record('local_aigrader_submission', (object) [
+            'id'           => $proposalrow->id,
+            'status'       => 'teacher_reviewed',
+            'final_grader' => (int) $USER->id,
+            'timemodified' => time(),
+        ]);
+        local_aigrader_review_log('reject', $proposalrow, $proposed, null);
+
+        redirect(
+            new moodle_url('/local/aigrader/manage.php', ['cmid' => $cm->id]),
+            get_string('msg_rejected', 'local_aigrader'),
+            null,
+            \core\output\notification::NOTIFY_INFO
+        );
+    }
+
+    if ($action === 'approve') {
+        $finalgrade        = required_param('finalgrade', PARAM_FLOAT);
+        $strengthstext     = required_param('finalstrengths', PARAM_RAW_TRIMMED);
+        $improvementstext  = required_param('finalimprovements', PARAM_RAW_TRIMMED);
+        $justification     = required_param('finaljustification', PARAM_RAW_TRIMMED);
+
+        if ($finalgrade < 0 || $finalgrade > 10) {
+            throw new \moodle_exception('errorgradeoutofrange', 'local_aigrader', '', $finalgrade);
+        }
+
+        $finalstrengths    = local_aigrader_split_lines($strengthstext);
+        $finalimprovements = local_aigrader_split_lines($improvementstext);
+
+        // Build final feedback object (keeps criterion_scores etc. from the original proposal).
+        $finalfeedback = array_merge(is_array($current) ? $current : [], [
+            'final_grade'    => round((float) $finalgrade, 2),
+            'strengths'      => $finalstrengths,
+            'improvements'   => $finalimprovements,
+            'justification'  => $justification,
+        ]);
+        $finalfeedbackjson = json_encode($finalfeedback, JSON_UNESCAPED_UNICODE);
+
+        $now = time();
+
+        // 1. Update local_aigrader_submission.
+        $DB->update_record('local_aigrader_submission', (object) [
+            'id'             => $proposalrow->id,
+            'status'         => 'published',
+            'final_grade'    => round((float) $finalgrade, 2),
+            'final_feedback' => $finalfeedbackjson,
+            'final_grader'   => (int) $USER->id,
+            'timemodified'   => $now,
+            'timepublished'  => $now,
+        ]);
+
+        // 2. Upsert m_assign_grades. grader = the TEACHER (USER), never the system.
+        local_aigrader_publish_grade(
+            assign: $assign,
+            studentid: (int) $proposalrow->studentid,
+            grade: (float) $finalgrade,
+            feedbackhtml: local_aigrader_format_feedback_html(
+                $finalstrengths,
+                $finalimprovements,
+                $justification
+            )
+        );
+
+        // 3. Log the action.
+        local_aigrader_review_log(
+            local_aigrader_diff_action($proposed, $finalfeedback),
+            $proposalrow,
+            $proposed,
+            $finalfeedback
+        );
+
+        redirect(
+            new moodle_url('/local/aigrader/manage.php', ['cmid' => $cm->id]),
+            get_string('msg_published', 'local_aigrader'),
+            null,
+            \core\output\notification::NOTIFY_SUCCESS
+        );
+    }
+}
+
+// ---------------------------------------------------------------------
+// Render page.
+// ---------------------------------------------------------------------
+$PAGE->set_url(new moodle_url('/local/aigrader/review.php', ['submissionid' => $submissionid]));
+$PAGE->set_context($context);
+$PAGE->set_pagelayout('incourse');
+$PAGE->set_title(get_string('review_pagetitle', 'local_aigrader', format_string($assign->name)));
+$PAGE->set_heading($course->fullname);
+
+$student = $DB->get_record('user', ['id' => $proposalrow->studentid],
+    \core_user\fields::for_name()->get_sql('', false, '', '', false)->selects . ', id');
+
+echo $OUTPUT->header();
+echo $OUTPUT->heading(get_string('review_heading', 'local_aigrader', [
+    'assign'  => format_string($assign->name),
+    'student' => fullname($student),
+]));
+
+// Submission text (read-only).
+$extraction = \local_aigrader\extractor\text_extractor::extract($submissionid);
+echo html_writer::tag('h3', get_string('review_submission_text', 'local_aigrader'));
+echo html_writer::start_div('card mb-4');
+echo html_writer::start_div('card-body');
+if ($extraction->is_ok()) {
+    echo html_writer::tag('pre',
+        s($extraction->text),
+        ['style' => 'white-space: pre-wrap; max-height: 300px; overflow-y: auto; font-family: inherit;']);
+} else {
+    echo html_writer::div(s($extraction->error ?? '(no text)'), 'text-muted');
+}
+echo html_writer::end_div();
+echo html_writer::end_div();
+
+// Criterion scores summary (read-only, info only).
+if (!empty($proposed['criterion_scores']) && is_array($proposed['criterion_scores'])) {
+    echo html_writer::tag('h3', get_string('review_criterion_scores', 'local_aigrader'));
+    echo html_writer::start_tag('ul');
+    foreach ($proposed['criterion_scores'] as $slug => $score) {
+        echo html_writer::tag('li', s($slug) . ': <strong>' . format_float((float) $score, 2) . '</strong> / 10');
+    }
+    echo html_writer::end_tag('ul');
+}
+
+// Editable form.
+echo html_writer::tag('h3', get_string('review_proposed', 'local_aigrader'));
+
+$formurl = $PAGE->url->out(false);
+echo html_writer::start_tag('form', ['method' => 'post', 'action' => $formurl, 'class' => 'mb-4']);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+
+// Final grade.
+echo html_writer::start_div('mb-3');
+echo html_writer::label(get_string('field_finalgrade', 'local_aigrader'), 'finalgrade', false, ['class' => 'form-label']);
+echo html_writer::empty_tag('input', [
+    'type'  => 'number',
+    'name'  => 'finalgrade',
+    'id'    => 'finalgrade',
+    'value' => format_float((float) $currentgrade, 2),
+    'min'   => 0,
+    'max'   => 10,
+    'step'  => 0.1,
+    'class' => 'form-control',
+    'style' => 'max-width: 120px;',
+    'required' => 'required',
+]);
+echo html_writer::end_div();
+
+// Strengths.
+echo html_writer::start_div('mb-3');
+echo html_writer::label(get_string('field_strengths', 'local_aigrader'), 'finalstrengths', false, ['class' => 'form-label']);
+echo html_writer::tag('textarea',
+    s(implode("\n", $current['strengths'] ?? [])),
+    ['name' => 'finalstrengths', 'id' => 'finalstrengths', 'rows' => 5, 'class' => 'form-control']);
+echo html_writer::tag('small', get_string('field_strengths_hint', 'local_aigrader'), ['class' => 'form-text text-muted']);
+echo html_writer::end_div();
+
+// Improvements.
+echo html_writer::start_div('mb-3');
+echo html_writer::label(get_string('field_improvements', 'local_aigrader'), 'finalimprovements', false, ['class' => 'form-label']);
+echo html_writer::tag('textarea',
+    s(implode("\n", $current['improvements'] ?? [])),
+    ['name' => 'finalimprovements', 'id' => 'finalimprovements', 'rows' => 5, 'class' => 'form-control']);
+echo html_writer::tag('small', get_string('field_improvements_hint', 'local_aigrader'), ['class' => 'form-text text-muted']);
+echo html_writer::end_div();
+
+// Justification.
+echo html_writer::start_div('mb-3');
+echo html_writer::label(get_string('field_justification', 'local_aigrader'), 'finaljustification', false, ['class' => 'form-label']);
+echo html_writer::tag('textarea',
+    s($current['justification'] ?? ''),
+    ['name' => 'finaljustification', 'id' => 'finaljustification', 'rows' => 3, 'class' => 'form-control']);
+echo html_writer::end_div();
+
+// Action buttons. Using <button> so we can have nice display text while
+// posting value="approve"/"reject" for the handler.
+echo html_writer::start_div('d-flex gap-2');
+echo html_writer::tag('button',
+    get_string('btn_approve_publish', 'local_aigrader'),
+    ['type' => 'submit', 'name' => 'action', 'value' => 'approve', 'class' => 'btn btn-success']);
+echo html_writer::tag('button',
+    get_string('btn_reject', 'local_aigrader'),
+    [
+        'type'    => 'submit',
+        'name'    => 'action',
+        'value'   => 'reject',
+        'class'   => 'btn btn-outline-danger ms-2',
+        'onclick' => "return confirm('" . get_string('confirm_reject', 'local_aigrader') . "');",
+    ]);
+echo html_writer::link(
+    new moodle_url('/local/aigrader/manage.php', ['cmid' => $cm->id]),
+    get_string('back', 'core'),
+    ['class' => 'btn btn-link ms-2']
+);
+echo html_writer::end_div();
+
+echo html_writer::end_tag('form');
+
+// Footer note showing meta info (provider, model, when proposed).
+$meta = [];
+if ($proposalrow->timeprocessed) {
+    $meta[] = get_string('review_proposed_at', 'local_aigrader',
+        userdate($proposalrow->timeprocessed, get_string('strftimedatetimeshort')));
+}
+$lastlog = $DB->get_record_sql(
+    'SELECT llm_provider, llm_model FROM {local_aigrader_log} ' .
+    'WHERE submissionid = ? AND action = ? ORDER BY id DESC LIMIT 1',
+    [$submissionid, 'grade']
+);
+if ($lastlog) {
+    $meta[] = get_string('review_proposed_by', 'local_aigrader',
+        ['provider' => s($lastlog->llm_provider), 'model' => s($lastlog->llm_model)]);
+}
+if ($meta) {
+    echo html_writer::div(implode(' · ', $meta), 'text-muted small');
+}
+
+echo $OUTPUT->footer();
+
+// ---------------------------------------------------------------------
+// Helpers.
+// ---------------------------------------------------------------------
+
+/**
+ * Split a textarea value (one item per line) into a clean array.
+ */
+function local_aigrader_split_lines(string $text): array {
+    $parts = preg_split('/\r?\n/', $text);
+    $parts = array_map('trim', $parts);
+    $parts = array_filter($parts, fn($s) => $s !== '');
+    return array_values($parts);
+}
+
+/**
+ * Build the HTML feedback shown to the student in the gradebook.
+ * Per ADR-001 section 8.2 the student does not see IA branding by default;
+ * the teacher takes pedagogical and legal ownership of the feedback.
+ */
+function local_aigrader_format_feedback_html(array $strengths, array $improvements, string $justification): string {
+    $html = '';
+    if ($strengths) {
+        $html .= html_writer::tag('p', html_writer::tag('strong', get_string('feedback_strengths', 'local_aigrader')));
+        $html .= html_writer::start_tag('ul');
+        foreach ($strengths as $s) {
+            $html .= html_writer::tag('li', s($s));
+        }
+        $html .= html_writer::end_tag('ul');
+    }
+    if ($improvements) {
+        $html .= html_writer::tag('p', html_writer::tag('strong', get_string('feedback_improvements', 'local_aigrader')));
+        $html .= html_writer::start_tag('ul');
+        foreach ($improvements as $i) {
+            $html .= html_writer::tag('li', s($i));
+        }
+        $html .= html_writer::end_tag('ul');
+    }
+    if (trim($justification) !== '') {
+        $html .= html_writer::tag('p', html_writer::tag('strong', get_string('feedback_justification', 'local_aigrader')));
+        $html .= html_writer::tag('p', nl2br(s($justification)));
+    }
+    return $html;
+}
+
+/**
+ * Write the approved grade and feedback to m_assign_grades + assignfeedback_comments,
+ * then push to the Moodle gradebook.
+ *
+ * The grader column is always the teacher's USER->id, never a system id.
+ */
+function local_aigrader_publish_grade(\stdClass $assign, int $studentid, float $grade, string $feedbackhtml): int {
+    global $DB, $USER, $CFG;
+
+    $now = time();
+
+    // Find or create the assign_grades row for this student's latest attempt.
+    $existing = $DB->get_record('assign_grades', [
+        'assignment'    => $assign->id,
+        'userid'        => $studentid,
+        'attemptnumber' => 0,
+    ]);
+
+    $rec = (object) [
+        'assignment'    => $assign->id,
+        'userid'        => $studentid,
+        'attemptnumber' => 0,
+        'grade'         => $grade,
+        'grader'        => (int) $USER->id,
+        'timemodified'  => $now,
+    ];
+    if ($existing) {
+        $rec->id = $existing->id;
+        $DB->update_record('assign_grades', $rec);
+        $gradeid = (int) $existing->id;
+    } else {
+        $rec->timecreated = $now;
+        $gradeid = (int) $DB->insert_record('assign_grades', $rec);
+    }
+
+    // Upsert assignfeedback_comments (only if the assignment has comments enabled).
+    // Note: 'value' is a TEXT column so we cannot put it in the WHERE clause directly
+    // (Moodle DML refuses it). Instead select the value and compare in PHP.
+    $cfgvalue = $DB->get_field('assign_plugin_config', 'value', [
+        'assignment' => $assign->id,
+        'subtype'    => 'assignfeedback',
+        'plugin'     => 'comments',
+        'name'       => 'enabled',
+    ], IGNORE_MISSING);
+    $commentsenabled = ((string) $cfgvalue === '1');
+    if ($commentsenabled) {
+        $existingcomment = $DB->get_record('assignfeedback_comments', ['grade' => $gradeid]);
+        $cmt = (object) [
+            'assignment'    => $assign->id,
+            'grade'         => $gradeid,
+            'commenttext'   => $feedbackhtml,
+            'commentformat' => FORMAT_HTML,
+        ];
+        if ($existingcomment) {
+            $cmt->id = $existingcomment->id;
+            $DB->update_record('assignfeedback_comments', $cmt);
+        } else {
+            $DB->insert_record('assignfeedback_comments', $cmt);
+        }
+    }
+
+    // Push to gradebook.
+    assign_update_grades($assign, $studentid);
+
+    return $gradeid;
+}
+
+/**
+ * Decide whether the teacher made meaningful changes to the AI proposal,
+ * for logging purposes (action='edit' vs 'approve').
+ */
+function local_aigrader_diff_action(array $proposed, array $final): string {
+    if (round((float) ($proposed['final_grade'] ?? 0), 2) !== round((float) ($final['final_grade'] ?? 0), 2)) {
+        return 'edit';
+    }
+    foreach (['strengths', 'improvements'] as $k) {
+        if (($proposed[$k] ?? []) !== ($final[$k] ?? [])) {
+            return 'edit';
+        }
+    }
+    if (trim((string) ($proposed['justification'] ?? '')) !== trim((string) ($final['justification'] ?? ''))) {
+        return 'edit';
+    }
+    return 'approve';
+}
+
+/**
+ * Write an entry to local_aigrader_log for a teacher review action.
+ */
+function local_aigrader_review_log(string $action, \stdClass $proposalrow, ?array $proposed, ?array $final): void {
+    global $DB, $USER;
+
+    $rec = (object) [
+        'submissionid'      => (int) $proposalrow->submissionid,
+        'userid'            => (int) $USER->id,
+        'studentid'         => (int) $proposalrow->studentid,
+        'courseid'          => (int) $proposalrow->courseid,
+        'action'            => $action,
+        'llm_provider'      => null,
+        'llm_model'         => null,
+        'prompt_hash'       => null,
+        'prompt_text'       => null,
+        'response_json'     => $final ? json_encode($final, JSON_UNESCAPED_UNICODE) : null,
+        'tokens_input'      => null,
+        'tokens_output'     => null,
+        'cost_usd'          => null,
+        'duration_ms'       => null,
+        'proposed_grade'    => $proposed['final_grade'] ?? null,
+        'final_grade'       => $final['final_grade'] ?? null,
+        'teacher_edits'     => ($action === 'edit' && $proposed && $final)
+            ? json_encode([
+                'grade'         => [$proposed['final_grade'] ?? null, $final['final_grade'] ?? null],
+                'strengths'     => [$proposed['strengths']     ?? [], $final['strengths']     ?? []],
+                'improvements'  => [$proposed['improvements']  ?? [], $final['improvements']  ?? []],
+                'justification' => [$proposed['justification'] ?? '', $final['justification'] ?? ''],
+            ], JSON_UNESCAPED_UNICODE)
+            : null,
+        'submission_format' => null,
+        'timecreated'       => time(),
+    ];
+    $DB->insert_record('local_aigrader_log', $rec);
+}

@@ -93,3 +93,67 @@ $string['status_unsupported'] = 'Unsupported format';
 
 $string['errornotenabled']  = 'AI Grader Pro is not enabled on this assignment.';
 $string['errornocriteria']  = 'No evaluation criteria are set for this assignment.';
+
+// Review page (/local/aigrader/review.php).
+$string['review_pagetitle']       = 'Review AI proposal · {$a}';
+$string['review_heading']         = 'Review AI proposal: {$a->assign} — {$a->student}';
+$string['review_submission_text'] = 'Student submission';
+$string['review_proposed']        = 'Proposed grade and feedback (editable)';
+$string['review_criterion_scores']= 'Criterion scores (from AI, for context)';
+$string['review_proposed_at']     = 'Proposed at {$a}';
+$string['review_proposed_by']     = 'by {$a->provider} ({$a->model})';
+
+$string['field_finalgrade']         = 'Final grade (0-10)';
+$string['field_strengths']          = 'Strengths';
+$string['field_strengths_hint']     = 'One per line. These will be shown to the student as positive feedback.';
+$string['field_improvements']       = 'Improvements';
+$string['field_improvements_hint']  = 'One per line. Constructive suggestions shown to the student.';
+$string['field_justification']      = 'Justification (visible to the student)';
+
+$string['btn_review']         = 'Review →';
+$string['btn_view_published'] = 'View ✓';
+$string['confirm_reject']     = 'This will discard the AI proposal and you will grade manually. Continue?';
+
+$string['msg_published']      = 'Grade approved and published to the gradebook.';
+$string['msg_rejected']       = 'AI proposal rejected. Please grade manually using the standard assignment grader.';
+
+$string['feedback_strengths']    = 'Strengths';
+$string['feedback_improvements'] = 'Areas to improve';
+$string['feedback_justification']= 'Summary';
+
+$string['errornoproposal']      = 'No AI proposal is available for this submission.';
+$string['errorparseproposal']   = 'The stored AI proposal could not be parsed. Try re-grading.';
+$string['errorgradeoutofrange'] = 'The grade must be between 0 and 10 (received: {$a}).';
+
+// Review page (/local/aigrader/review.php).
+$string['review_pagetitle']       = 'Review AI proposal · {$a}';
+$string['review_heading']         = 'Review AI proposal: {$a->assign} — {$a->student}';
+$string['review_submission_text'] = 'Student submission';
+$string['review_proposed']        = 'Proposed grade and feedback (editable)';
+$string['review_criterion_scores']= 'Criterion scores (from AI, for context)';
+$string['review_proposed_at']     = 'Proposed at {$a}';
+$string['review_proposed_by']     = 'by {$a->provider} ({$a->model})';
+
+$string['field_finalgrade']         = 'Final grade (0-10)';
+$string['field_strengths']          = 'Strengths';
+$string['field_strengths_hint']     = 'One per line. These will be shown to the student as positive feedback.';
+$string['field_improvements']       = 'Improvements';
+$string['field_improvements_hint']  = 'One per line. Constructive suggestions shown to the student.';
+$string['field_justification']      = 'Justification (visible to the student)';
+
+$string['btn_review']          = 'Review →';
+$string['btn_view_published']  = 'View ✓';
+$string['btn_approve_publish'] = 'Approve and publish';
+$string['btn_reject']          = 'Reject (grade manually)';
+$string['confirm_reject']      = 'This will discard the AI proposal and you will grade manually. Continue?';
+
+$string['msg_published']      = 'Grade approved and published to the gradebook.';
+$string['msg_rejected']       = 'AI proposal rejected. Please grade manually using the standard assignment grader.';
+
+$string['feedback_strengths']    = 'Strengths';
+$string['feedback_improvements'] = 'Areas to improve';
+$string['feedback_justification']= 'Summary';
+
+$string['errornoproposal']      = 'No AI proposal is available for this submission.';
+$string['errorparseproposal']   = 'The stored AI proposal could not be parsed. Try re-grading.';
+$string['errorgradeoutofrange'] = 'The grade must be between 0 and 10 (received: {$a}).';

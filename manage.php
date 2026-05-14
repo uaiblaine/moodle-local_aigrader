@@ -168,8 +168,22 @@ foreach ($rows as $r) {
     $disabled = ($r->ai_status === 'pending_ai');
 
     $action = '';
+
+    // If there's a proposal to review, that's the primary CTA.
+    if (in_array($r->ai_status, ['ai_proposed', 'teacher_reviewed', 'published'], true)) {
+        $reviewlabel = $r->ai_status === 'published'
+            ? get_string('btn_view_published', 'local_aigrader')
+            : get_string('btn_review', 'local_aigrader');
+        $action .= html_writer::link(
+            new moodle_url('/local/aigrader/review.php', ['submissionid' => $r->submissionid]),
+            $reviewlabel,
+            ['class' => 'btn btn-success btn-sm me-1']
+        );
+    }
+
+    // Re-grade / Grade-with-AI button (form post that enqueues a task).
     if (!$disabled) {
-        $action = html_writer::start_tag('form', [
+        $action .= html_writer::start_tag('form', [
             'method' => 'post',
             'action' => $PAGE->url->out(false),
             'style'  => 'display:inline;',
@@ -177,10 +191,14 @@ foreach ($rows as $r) {
         $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey',      'value' => sesskey()]);
         $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',       'value' => 'enqueue']);
         $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'submissionid', 'value' => $r->submissionid]);
-        $action .= html_writer::empty_tag('input', ['type' => 'submit', 'value' => $btnlabel, 'class' => 'btn btn-primary btn-sm']);
+        $action .= html_writer::empty_tag('input', [
+            'type' => 'submit',
+            'value' => $btnlabel,
+            'class' => ($r->ai_status === null) ? 'btn btn-primary btn-sm' : 'btn btn-outline-secondary btn-sm',
+        ]);
         $action .= html_writer::end_tag('form');
     } else {
-        $action = html_writer::span(get_string('btn_pending', 'local_aigrader'), 'text-muted');
+        $action .= html_writer::span(get_string('btn_pending', 'local_aigrader'), 'text-muted');
     }
 
     $table->data[] = [$student, $submitted, $status, $grade, $action];
