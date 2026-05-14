@@ -1,0 +1,29 @@
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artefactos (cuando los haya)
+node_modules/
+vendor/
+amd/build/
+*.min.js
+*.min.css
+
+# Dependencias generadas por composer/npm
+composer.lock
+package-lock.json
+
+# Coverage de tests
+coverage/
+.phpunit.result.cache
+
+# Logs y temporales
+*.log
+*.tmp
+*.bak
