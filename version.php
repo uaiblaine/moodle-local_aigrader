@@ -10,7 +10,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051404;           // YYYYMMDDXX. Added mod_assign form hooks + rubric importer.
+$plugin->version   = 2026051501;           // YYYYMMDDXX. Added text extractor + CLI testers.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_ALPHA;       // Pre-MVP.
-$plugin->release   = 'v0.2.0-alpha';
+$plugin->release   = 'v0.3.0-alpha';
