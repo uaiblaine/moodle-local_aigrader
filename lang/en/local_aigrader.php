@@ -63,3 +63,33 @@ $string['privacy:metadata'] = 'AI Grader Pro stores audit logs of AI-assisted gr
 // Adhoc tasks (shown in Site administration > Server > Tasks).
 $string['task_grade_submission'] = 'AI Grader Pro: grade a submission';
 $string['errortaskfailed'] = 'AI Grader Pro grading task failed: {$a}';
+
+// Management page (/local/aigrader/manage.php).
+$string['manage_pagetitle']         = 'AI Grader Pro · {$a}';
+$string['manage_heading']           = 'AI Grader Pro: {$a}';
+$string['manage_disabled']          = 'AI Grader Pro is not enabled on this assignment. Edit the assignment settings to enable it.';
+$string['manage_no_submissions']    = 'No submitted assignments yet for this task.';
+$string['manage_polling']           = 'A grading task is in progress. This page will refresh automatically.';
+$string['manage_back_to_assignment']= '← Back to the assignment';
+$string['msg_enqueued']             = 'AI grading task enqueued. It will run on the next cron tick.';
+
+$string['th_student']   = 'Student';
+$string['th_submitted'] = 'Submitted';
+$string['th_status']    = 'AI status';
+$string['th_grade']     = 'Proposed grade';
+$string['th_action']    = 'Action';
+
+$string['btn_grade_with_ai']   = 'Grade with AI';
+$string['btn_regrade_with_ai'] = 'Re-grade with AI';
+$string['btn_pending']         = 'Processing...';
+
+$string['status_none']        = 'No AI grading yet';
+$string['status_pending']     = 'Pending';
+$string['status_proposed']    = 'AI proposed';
+$string['status_reviewed']    = 'Teacher reviewed';
+$string['status_published']   = 'Published';
+$string['status_error']       = 'Error';
+$string['status_unsupported'] = 'Unsupported format';
+
+$string['errornotenabled']  = 'AI Grader Pro is not enabled on this assignment.';
+$string['errornocriteria']  = 'No evaluation criteria are set for this assignment.';

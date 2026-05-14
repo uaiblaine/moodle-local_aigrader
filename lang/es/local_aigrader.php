@@ -63,3 +63,33 @@ $string['privacy:metadata'] = 'AI Grader Pro almacena registros de auditoría de
 // Tareas adhoc (vistas en Administración del sitio > Servidor > Tareas).
 $string['task_grade_submission'] = 'AI Grader Pro: calificar una entrega';
 $string['errortaskfailed'] = 'La tarea de calificación de AI Grader Pro ha fallado: {$a}';
+
+// Pagina de gestion (/local/aigrader/manage.php).
+$string['manage_pagetitle']         = 'AI Grader Pro · {$a}';
+$string['manage_heading']           = 'AI Grader Pro: {$a}';
+$string['manage_disabled']          = 'AI Grader Pro no esta habilitado en esta tarea. Edita la configuracion de la tarea para activarlo.';
+$string['manage_no_submissions']    = 'Aun no hay entregas para esta tarea.';
+$string['manage_polling']           = 'Una calificacion esta en proceso. Esta pagina se actualizara automaticamente.';
+$string['manage_back_to_assignment']= '← Volver a la tarea';
+$string['msg_enqueued']             = 'Tarea de calificacion IA encolada. Se ejecutara en el proximo cron.';
+
+$string['th_student']   = 'Alumno';
+$string['th_submitted'] = 'Entregado';
+$string['th_status']    = 'Estado IA';
+$string['th_grade']     = 'Nota propuesta';
+$string['th_action']    = 'Accion';
+
+$string['btn_grade_with_ai']   = 'Calificar con IA';
+$string['btn_regrade_with_ai'] = 'Recalificar con IA';
+$string['btn_pending']         = 'Procesando...';
+
+$string['status_none']        = 'Sin calificacion IA';
+$string['status_pending']     = 'Pendiente';
+$string['status_proposed']    = 'Propuesta IA';
+$string['status_reviewed']    = 'Revisada por profesor';
+$string['status_published']   = 'Publicada';
+$string['status_error']       = 'Error';
+$string['status_unsupported'] = 'Formato no soportado';
+
+$string['errornotenabled']  = 'AI Grader Pro no esta habilitado en esta tarea.';
+$string['errornocriteria']  = 'No hay criterios de evaluacion definidos para esta tarea.';
