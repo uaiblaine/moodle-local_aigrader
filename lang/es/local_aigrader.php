@@ -59,3 +59,7 @@ $string['rubric_export_header'] = 'Criterios (auto-importados de la rúbrica de 
 
 // Privacidad.
 $string['privacy:metadata'] = 'AI Grader Pro almacena registros de auditoría de las acciones de calificación asistida por IA, incluyendo prompts enviados al proveedor LLM configurado, respuestas del modelo, notas propuestas y ediciones del profesor. Consulta la documentación del plugin para más detalles.';
+
+// Tareas adhoc (vistas en Administración del sitio > Servidor > Tareas).
+$string['task_grade_submission'] = 'AI Grader Pro: calificar una entrega';
+$string['errortaskfailed'] = 'La tarea de calificación de AI Grader Pro ha fallado: {$a}';

@@ -59,3 +59,7 @@ $string['rubric_export_header'] = 'Criteria (auto-imported from the assignment\'
 
 // Privacy.
 $string['privacy:metadata'] = 'AI Grader Pro stores audit logs of AI-assisted grading actions, including prompts sent to the configured LLM provider, model responses, proposed grades and teacher edits. See plugin documentation for full details.';
+
+// Adhoc tasks (shown in Site administration > Server > Tasks).
+$string['task_grade_submission'] = 'AI Grader Pro: grade a submission';
+$string['errortaskfailed'] = 'AI Grader Pro grading task failed: {$a}';
