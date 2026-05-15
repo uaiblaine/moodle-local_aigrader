@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Orchestrates the end-to-end grading pipeline:
  *
@@ -17,11 +32,13 @@ namespace local_aigrader;
 
 use local_aigrader\prompt\builder;
 use local_aigrader\prompt\built_prompt;
-
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Class manager.
+ */
 class manager {
-
+    /**
+     * Grade submission.
+     */
     public function grade_submission(int $submissionid): grading_result {
         global $DB, $USER;
 
@@ -49,9 +66,9 @@ class manager {
             //
             // In Moodle 4.5, generate_text only accepts prompttext (no
             // systeminstruction parameter — added in 4.6+). We concatenate
-            // our system+user messages so the LLM sees the full instructions.
-            // The provider's own systeminstruction config should be EMPTY so
-            // it does not interfere with our prompt.
+            // Our system+user messages so the LLM sees the full instructions.
+            // The provider's own systeminstruction config should be EMPTY so.
+            // It does not interfere with our prompt.
             $combinedprompt = $prompt->system_message . "\n\n--- TASK ---\n\n" . $prompt->user_message;
 
             $action = new \core_ai\aiactions\generate_text(
@@ -85,7 +102,7 @@ class manager {
             $result->tokens_output = (int) ($data['completiontokens'] ?? 0);
 
             // The openai provider response does not include 'model' in 4.5;
-            // read it from the provider's configured model setting instead.
+            // Read it from the provider's configured model setting instead.
             if (empty($result->llm_model)) {
                 $result->llm_model = (string) get_config(
                     'aiprovider_openai',
@@ -124,7 +141,6 @@ class manager {
             $result->proposal = $proposal;
             $result->mark_success();
             return $result;
-
         } catch (\Throwable $e) {
             $result->duration_ms = (int) round((microtime(true) - $start) * 1000);
             $msg = 'exception: ' . $e->getMessage();
@@ -168,6 +184,9 @@ class manager {
         return (int) $DB->insert_record('local_aigrader_submission', $rec);
     }
 
+    /**
+     * Mark submission error.
+     */
     private static function mark_submission_error(int $localid, string $message): void {
         global $DB;
         $DB->update_record('local_aigrader_submission', (object) [
@@ -188,7 +207,7 @@ class manager {
         ?parsed_proposal $proposal,
         ?object $response,
         ?string $error,
-        int $duration_ms
+        int $durationms
     ): int {
         global $DB, $USER;
 
@@ -219,7 +238,7 @@ class manager {
             'tokens_input'      => (int) ($data['prompttokens'] ?? 0),
             'tokens_output'     => (int) ($data['completiontokens'] ?? 0),
             'cost_usd'          => 0.0,
-            'duration_ms'       => $duration_ms,
+            'duration_ms'       => $durationms,
             'proposed_grade'    => $proposal && $proposal->success ? $proposal->grade : null,
             'final_grade'       => null,
             'teacher_edits'     => null,

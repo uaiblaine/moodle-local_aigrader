@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Dispatcher: top-level extractor that handles online text + uploaded files.
  *
@@ -13,11 +28,10 @@
  */
 
 namespace local_aigrader\extractor;
-
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Class dispatcher.
+ */
 class dispatcher implements extractor_interface {
-
     /** Extensions we treat as code (read as text, language-tagged in the prompt). */
     private const CODE_EXTENSIONS = [
         'py', 'java', 'cpp', 'c', 'h', 'hpp', 'cs',
@@ -32,6 +46,9 @@ class dispatcher implements extractor_interface {
     /** Max characters per individual uploaded file (before truncation). */
     private const MAX_PER_FILE = 200000;
 
+    /**
+     * Extract.
+     */
     public static function extract(int $submissionid): extraction_result {
         global $DB;
 
@@ -166,7 +183,14 @@ class dispatcher implements extractor_interface {
     }
 
     /**
-     * @param string[] $warnings
+     * Wrap a plain text/code file's content with header + metadata for the prompt.
+     *
+     * @param string $filename Original file name.
+     * @param string $text Already-extracted text.
+     * @param string $format Format constant for the entry.
+     * @param string[] $warnings Existing warnings (may be appended to).
+     * @param string $codelang Optional code-language tag for the header.
+     * @return array{header:string,text:string,format:string,warnings:string[]}|null
      */
     private static function wrap_simple(string $filename, string $text, string $format, array $warnings, string $codelang = ''): ?array {
         $text = self::normalise_encoding($text);
@@ -187,6 +211,9 @@ class dispatcher implements extractor_interface {
         ];
     }
 
+    /**
+     * Unsupported.
+     */
     private static function unsupported(string $filename, string $reason): array {
         return [
             'header'   => '=== ' . $filename . ' (UNSUPPORTED: ' . $reason . ') ===',
@@ -196,6 +223,9 @@ class dispatcher implements extractor_interface {
         ];
     }
 
+    /**
+     * Normalise encoding.
+     */
     private static function normalise_encoding(string $content): string {
         $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
         if ($encoding !== false && $encoding !== 'UTF-8') {

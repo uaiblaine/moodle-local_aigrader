@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * English language strings for AI Grader Pro.
  *
@@ -70,7 +85,7 @@ $string['manage_heading']           = 'AI Grader Pro: {$a}';
 $string['manage_disabled']          = 'AI Grader Pro is not enabled on this assignment. Edit the assignment settings to enable it.';
 $string['manage_no_submissions']    = 'No submitted assignments yet for this task.';
 $string['manage_polling']           = 'A grading task is in progress. This page will refresh automatically.';
-$string['manage_back_to_assignment']= '← Back to the assignment';
+$string['manage_back_to_assignment'] = '← Back to the assignment';
 $string['msg_enqueued']             = 'AI grading task enqueued. It will run on the next cron tick.';
 
 $string['th_student']   = 'Student';
@@ -99,7 +114,7 @@ $string['review_pagetitle']       = 'Review AI proposal · {$a}';
 $string['review_heading']         = 'Review AI proposal: {$a->assign} — {$a->student}';
 $string['review_submission_text'] = 'Student submission';
 $string['review_proposed']        = 'Proposed grade and feedback (editable)';
-$string['review_criterion_scores']= 'Criterion scores (from AI, for context)';
+$string['review_criterion_scores'] = 'Criterion scores (from AI, for context)';
 $string['review_proposed_at']     = 'Proposed at {$a}';
 $string['review_proposed_by']     = 'by {$a->provider} ({$a->model})';
 
@@ -119,7 +134,7 @@ $string['msg_rejected']       = 'AI proposal rejected. Please grade manually usi
 
 $string['feedback_strengths']    = 'Strengths';
 $string['feedback_improvements'] = 'Areas to improve';
-$string['feedback_justification']= 'Summary';
+$string['feedback_justification'] = 'Summary';
 
 $string['errornoproposal']      = 'No AI proposal is available for this submission.';
 $string['errorparseproposal']   = 'The stored AI proposal could not be parsed. Try re-grading.';
@@ -130,7 +145,7 @@ $string['review_pagetitle']       = 'Review AI proposal · {$a}';
 $string['review_heading']         = 'Review AI proposal: {$a->assign} — {$a->student}';
 $string['review_submission_text'] = 'Student submission';
 $string['review_proposed']        = 'Proposed grade and feedback (editable)';
-$string['review_criterion_scores']= 'Criterion scores (from AI, for context)';
+$string['review_criterion_scores'] = 'Criterion scores (from AI, for context)';
 $string['review_proposed_at']     = 'Proposed at {$a}';
 $string['review_proposed_by']     = 'by {$a->provider} ({$a->model})';
 
@@ -152,7 +167,7 @@ $string['msg_rejected']       = 'AI proposal rejected. Please grade manually usi
 
 $string['feedback_strengths']    = 'Strengths';
 $string['feedback_improvements'] = 'Areas to improve';
-$string['feedback_justification']= 'Summary';
+$string['feedback_justification'] = 'Summary';
 
 $string['errornoproposal']      = 'No AI proposal is available for this submission.';
 $string['errorparseproposal']   = 'The stored AI proposal could not be parsed. Try re-grading.';

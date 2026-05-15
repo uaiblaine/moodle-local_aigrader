@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * AI Grader Pro management page.
  *
@@ -27,9 +42,9 @@ require_capability('local/aigrader:use', $context);
 $assign = $DB->get_record('assign', ['id' => $cm->instance], '*', MUST_EXIST);
 $config = $DB->get_record('local_aigrader_assign', ['assignid' => $assign->id]);
 
-// -------------------------------------------------------------------
+// -------------------------------------------------------------------.
 // Handle POST: enqueue grading for one submission.
-// -------------------------------------------------------------------
+// -------------------------------------------------------------------.
 $action = optional_param('action', '', PARAM_ALPHA);
 if ($action === 'enqueue' && data_submitted()) {
     require_sesskey();
@@ -42,11 +57,15 @@ if ($action === 'enqueue' && data_submitted()) {
     }
 
     $submissionid = required_param('submissionid', PARAM_INT);
-    $submission   = $DB->get_record('assign_submission',
-        ['id' => $submissionid, 'assignment' => $assign->id], '*', MUST_EXIST);
+    $submission   = $DB->get_record(
+        'assign_submission',
+        ['id' => $submissionid, 'assignment' => $assign->id],
+        '*',
+        MUST_EXIST
+    );
 
-    // Pre-insert pending row for immediate UI feedback. The manager will
-    // upsert this row again when the task runs.
+    // Pre-insert pending row for immediate UI feedback. The manager will.
+    // Upsert this row again when the task runs.
     $existing = $DB->get_record('local_aigrader_submission', ['submissionid' => $submissionid]);
     $now = time();
     if (!$existing) {
@@ -74,14 +93,17 @@ if ($action === 'enqueue' && data_submitted()) {
     $task->set_userid((int) $USER->id);
     \core\task\manager::queue_adhoc_task($task);
 
-    redirect(new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]),
-        get_string('msg_enqueued', 'local_aigrader'), null,
-        \core\output\notification::NOTIFY_SUCCESS);
+    redirect(
+        new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]),
+        get_string('msg_enqueued', 'local_aigrader'),
+        null,
+        \core\output\notification::NOTIFY_SUCCESS
+    );
 }
 
-// -------------------------------------------------------------------
+// -------------------------------------------------------------------.
 // Render the page.
-// -------------------------------------------------------------------
+// -------------------------------------------------------------------.
 $PAGE->set_url(new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]));
 $PAGE->set_context($context);
 $PAGE->set_pagelayout('incourse');
@@ -92,8 +114,10 @@ echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('manage_heading', 'local_aigrader', format_string($assign->name)));
 
 if (!$config || empty($config->enabled)) {
-    echo $OUTPUT->notification(get_string('manage_disabled', 'local_aigrader'),
-        \core\output\notification::NOTIFY_WARNING);
+    echo $OUTPUT->notification(
+        get_string('manage_disabled', 'local_aigrader'),
+        \core\output\notification::NOTIFY_WARNING
+    );
     echo $OUTPUT->footer();
     exit;
 }
@@ -123,8 +147,10 @@ $rows = $DB->get_records_sql($sql, array_merge([
 ], $namefields->params));
 
 if (empty($rows)) {
-    echo $OUTPUT->notification(get_string('manage_no_submissions', 'local_aigrader'),
-        \core\output\notification::NOTIFY_INFO);
+    echo $OUTPUT->notification(
+        get_string('manage_no_submissions', 'local_aigrader'),
+        \core\output\notification::NOTIFY_INFO
+    );
     echo $OUTPUT->footer();
     exit;
 }
@@ -139,17 +165,19 @@ foreach ($rows as $r) {
 }
 if ($haspending) {
     $PAGE->requires->js_init_code("setTimeout(function() { window.location.reload(); }, 4000);");
-    echo $OUTPUT->notification(get_string('manage_polling', 'local_aigrader'),
-        \core\output\notification::NOTIFY_INFO);
+    echo $OUTPUT->notification(
+        get_string('manage_polling', 'local_aigrader'),
+        \core\output\notification::NOTIFY_INFO
+    );
 }
 
 $table = new html_table();
 $table->head = [
-    get_string('th_student',  'local_aigrader'),
-    get_string('th_submitted','local_aigrader'),
-    get_string('th_status',   'local_aigrader'),
-    get_string('th_grade',    'local_aigrader'),
-    get_string('th_action',   'local_aigrader'),
+    get_string('th_student', 'local_aigrader'),
+    get_string('th_submitted', 'local_aigrader'),
+    get_string('th_status', 'local_aigrader'),
+    get_string('th_grade', 'local_aigrader'),
+    get_string('th_action', 'local_aigrader'),
 ];
 $table->attributes['class'] = 'generaltable';
 $table->data = [];
@@ -188,8 +216,8 @@ foreach ($rows as $r) {
             'action' => $PAGE->url->out(false),
             'style'  => 'display:inline;',
         ]);
-        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey',      'value' => sesskey()]);
-        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',       'value' => 'enqueue']);
+        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'enqueue']);
         $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'submissionid', 'value' => $r->submissionid]);
         $action .= html_writer::empty_tag('input', [
             'type' => 'submit',
@@ -217,9 +245,9 @@ echo html_writer::div(
 
 echo $OUTPUT->footer();
 
-// -------------------------------------------------------------------
+// -------------------------------------------------------------------.
 // Local helpers.
-// -------------------------------------------------------------------
+// -------------------------------------------------------------------.
 /**
  * Render the AI grading status as a badge.
  */

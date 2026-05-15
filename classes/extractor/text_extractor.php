@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Extractor for online text submissions (assignsubmission_onlinetext).
  *
@@ -11,11 +26,10 @@
  */
 
 namespace local_aigrader\extractor;
-
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Class text_extractor.
+ */
 class text_extractor implements extractor_interface {
-
     /**
      * Extract content from an online text submission.
      *
@@ -49,7 +63,7 @@ class text_extractor implements extractor_interface {
         if (mb_strlen($raw) > mb_strlen($text) * 5) {
             // Heuristic: HTML markup was more than 5x the resulting text.
             // Probably a rich editor with lots of formatting; the LLM will still
-            // get the plain text, but flag it so we know if grading quality drops.
+            // Get the plain text, but flag it so we know if grading quality drops.
             $warnings[] = 'Submission had heavy HTML markup; only plain text was extracted';
         }
 
@@ -65,8 +79,8 @@ class text_extractor implements extractor_interface {
      * - Normalises whitespace.
      */
     private static function normalise(string $html): string {
-        // Replace common block tags with newlines BEFORE strip_tags so we don't
-        // glue paragraphs together.
+        // Replace common block tags with newlines BEFORE strip_tags so we don't.
+        // Glue paragraphs together.
         $html = preg_replace('#</(p|div|li|h[1-6]|tr)>#i', "\n", $html);
         $html = preg_replace('#<br\s*/?>#i', "\n", $html);
 

@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * PHPUnit tests for the AI Grader Pro privacy provider.
  *
@@ -18,10 +33,11 @@ use core_privacy\local\request\writer;
 defined('MOODLE_INTERNAL') || die();
 
 /**
+ * Tests for the AI Grader Pro privacy provider.
+ *
  * @covers \local_aigrader\privacy\provider
  */
 final class provider_test extends \advanced_testcase {
-
     /** @var \stdClass */
     private $course;
     /** @var \stdClass */
@@ -35,6 +51,9 @@ final class provider_test extends \advanced_testcase {
     /** @var int assign_submission.id */
     private $submissionid;
 
+    /**
+     * Setup.
+     */
     protected function setUp(): void {
         parent::setUp();
         $this->resetAfterTest();
@@ -82,8 +101,8 @@ final class provider_test extends \advanced_testcase {
         // AI Grader Pro per-assignment config (edited by the teacher).
         // NOTE: create_module() above fires our coursemodule_edit_post_actions
         // hook, which auto-inserts a default (disabled) row for the new assign.
-        // Wipe that row and insert our own with controlled values so the rest
-        // of the fixture is deterministic.
+        // Wipe that row and insert our own with controlled values so the rest.
+        // Of the fixture is deterministic.
         $DB->delete_records('local_aigrader_assign', ['assignid' => $this->assigninstance->id]);
         $DB->insert_record('local_aigrader_assign', (object) [
             'assignid'      => $this->assigninstance->id,
@@ -129,10 +148,13 @@ final class provider_test extends \advanced_testcase {
         ]);
     }
 
-    // -----------------------------------------------------------------
-    // get_metadata
-    // -----------------------------------------------------------------
+    // -----------------------------------------------------------------.
+    // Get_metadata.
+    // -----------------------------------------------------------------.
 
+    /**
+     * Test get metadata declares all storage locations.
+     */
     public function test_get_metadata_declares_all_storage_locations(): void {
         $collection = new collection('local_aigrader');
         $result     = provider::get_metadata($collection);
@@ -147,71 +169,101 @@ final class provider_test extends \advanced_testcase {
         $this->assertContains('ai_subsystem', $names);
     }
 
-    // -----------------------------------------------------------------
-    // get_contexts_for_userid
-    // -----------------------------------------------------------------
+    // -----------------------------------------------------------------.
+    // Get_contexts_for_userid.
+    // -----------------------------------------------------------------.
 
+    /**
+     * Test get contexts for student finds the assignment.
+     */
     public function test_get_contexts_for_student_finds_the_assignment(): void {
         $contextlist = provider::get_contexts_for_userid($this->student->id);
-        // Use assertContainsEquals — Moodle's contextlist may return ids as
+        // Use assertContainsEquals — Moodle's contextlist may return ids as.
         // strings (PostgreSQL pgsql driver default) while $context->id is int.
         $this->assertContainsEquals($this->context->id, $contextlist->get_contextids());
     }
 
+    /**
+     * Test get contexts for teacher finds the assignment.
+     */
     public function test_get_contexts_for_teacher_finds_the_assignment(): void {
         $contextlist = provider::get_contexts_for_userid($this->teacher->id);
         $this->assertContainsEquals($this->context->id, $contextlist->get_contextids());
     }
 
+    /**
+     * Test get contexts for unrelated user is empty.
+     */
     public function test_get_contexts_for_unrelated_user_is_empty(): void {
         $other = $this->getDataGenerator()->create_user();
         $contextlist = provider::get_contexts_for_userid($other->id);
         $this->assertEmpty($contextlist->get_contextids());
     }
 
-    // -----------------------------------------------------------------
-    // get_users_in_context
-    // -----------------------------------------------------------------
+    // -----------------------------------------------------------------.
+    // Get_users_in_context.
+    // -----------------------------------------------------------------.
 
+    /**
+     * Test get users in context lists student and teacher.
+     */
     public function test_get_users_in_context_lists_student_and_teacher(): void {
         $userlist = new userlist($this->context, 'local_aigrader');
         provider::get_users_in_context($userlist);
 
         $ids = $userlist->get_userids();
-        // Loose comparison: ids come back as strings from pgsql driver but
+        // Loose comparison: ids come back as strings from pgsql driver but.
         // $student->id is int from create_user().
         $this->assertContainsEquals($this->student->id, $ids);
         $this->assertContainsEquals($this->teacher->id, $ids);
     }
 
-    // -----------------------------------------------------------------
-    // delete_data_for_all_users_in_context
-    // -----------------------------------------------------------------
+    // -----------------------------------------------------------------.
+    // Delete_data_for_all_users_in_context.
+    // -----------------------------------------------------------------.
 
+    /**
+     * Test delete all users in context wipes assignment.
+     */
     public function test_delete_all_users_in_context_wipes_assignment(): void {
         global $DB;
 
-        $this->assertEquals(1, $DB->count_records('local_aigrader_submission',
-            ['assignid' => $this->assigninstance->id]));
-        $this->assertEquals(1, $DB->count_records('local_aigrader_assign',
-            ['assignid' => $this->assigninstance->id]));
-        $this->assertEquals(1, $DB->count_records('local_aigrader_log',
-            ['submissionid' => $this->submissionid]));
+        $this->assertEquals(1, $DB->count_records(
+            'local_aigrader_submission',
+            ['assignid' => $this->assigninstance->id]
+        ));
+        $this->assertEquals(1, $DB->count_records(
+            'local_aigrader_assign',
+            ['assignid' => $this->assigninstance->id]
+        ));
+        $this->assertEquals(1, $DB->count_records(
+            'local_aigrader_log',
+            ['submissionid' => $this->submissionid]
+        ));
 
         provider::delete_data_for_all_users_in_context($this->context);
 
-        $this->assertEquals(0, $DB->count_records('local_aigrader_submission',
-            ['assignid' => $this->assigninstance->id]));
-        $this->assertEquals(0, $DB->count_records('local_aigrader_assign',
-            ['assignid' => $this->assigninstance->id]));
-        $this->assertEquals(0, $DB->count_records('local_aigrader_log',
-            ['submissionid' => $this->submissionid]));
+        $this->assertEquals(0, $DB->count_records(
+            'local_aigrader_submission',
+            ['assignid' => $this->assigninstance->id]
+        ));
+        $this->assertEquals(0, $DB->count_records(
+            'local_aigrader_assign',
+            ['assignid' => $this->assigninstance->id]
+        ));
+        $this->assertEquals(0, $DB->count_records(
+            'local_aigrader_log',
+            ['submissionid' => $this->submissionid]
+        ));
     }
 
-    // -----------------------------------------------------------------
-    // delete_data_for_user
-    // -----------------------------------------------------------------
+    // -----------------------------------------------------------------.
+    // Delete_data_for_user.
+    // -----------------------------------------------------------------.
 
+    /**
+     * Test delete for student hard deletes student rows.
+     */
     public function test_delete_for_student_hard_deletes_student_rows(): void {
         global $DB;
 
@@ -219,68 +271,107 @@ final class provider_test extends \advanced_testcase {
         provider::delete_data_for_user($approved);
 
         // Student-owned rows are hard-deleted.
-        $this->assertEquals(0, $DB->count_records('local_aigrader_submission',
-            ['studentid' => $this->student->id]));
-        $this->assertEquals(0, $DB->count_records('local_aigrader_log',
-            ['studentid' => $this->student->id]));
+        $this->assertEquals(0, $DB->count_records(
+            'local_aigrader_submission',
+            ['studentid' => $this->student->id]
+        ));
+        $this->assertEquals(0, $DB->count_records(
+            'local_aigrader_log',
+            ['studentid' => $this->student->id]
+        ));
     }
 
+    /**
+     * Test delete for teacher anonymises keeps audit trail.
+     */
     public function test_delete_for_teacher_anonymises_keeps_audit_trail(): void {
         global $DB;
 
         // Before: row exists with userid=teacher.
-        $this->assertEquals(1, $DB->count_records('local_aigrader_log',
-            ['userid' => $this->teacher->id]));
-        $this->assertEquals(1, $DB->count_records('local_aigrader_assign',
-            ['usermodified' => $this->teacher->id]));
+        $this->assertEquals(1, $DB->count_records(
+            'local_aigrader_log',
+            ['userid' => $this->teacher->id]
+        ));
+        $this->assertEquals(1, $DB->count_records(
+            'local_aigrader_assign',
+            ['usermodified' => $this->teacher->id]
+        ));
 
         // Pre-existing student row should remain intact after teacher deletion.
-        $studentrowsbefore = $DB->count_records('local_aigrader_submission',
-            ['studentid' => $this->student->id]);
+        $studentrowsbefore = $DB->count_records(
+            'local_aigrader_submission',
+            ['studentid' => $this->student->id]
+        );
 
         $approved = new approved_contextlist($this->teacher, 'local_aigrader', [$this->context->id]);
         provider::delete_data_for_user($approved);
 
         // Teacher's identity should be anonymised to 0 (not deleted).
-        $this->assertEquals(0, $DB->count_records('local_aigrader_log',
-            ['userid' => $this->teacher->id]));
-        $this->assertEquals(1, $DB->count_records('local_aigrader_log',
-            ['userid' => 0]),
-            'Audit row should still exist with userid=0');
+        $this->assertEquals(0, $DB->count_records(
+            'local_aigrader_log',
+            ['userid' => $this->teacher->id]
+        ));
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'local_aigrader_log',
+                ['userid' => 0]
+            ),
+            'Audit row should still exist with userid=0'
+        );
 
-        $this->assertEquals(0, $DB->count_records('local_aigrader_assign',
-            ['usermodified' => $this->teacher->id]));
-        $this->assertEquals(1, $DB->count_records('local_aigrader_assign',
-            ['usermodified' => 0]));
+        $this->assertEquals(0, $DB->count_records(
+            'local_aigrader_assign',
+            ['usermodified' => $this->teacher->id]
+        ));
+        $this->assertEquals(1, $DB->count_records(
+            'local_aigrader_assign',
+            ['usermodified' => 0]
+        ));
 
         // Student rows untouched.
-        $this->assertEquals($studentrowsbefore, $DB->count_records('local_aigrader_submission',
-            ['studentid' => $this->student->id]));
+        $this->assertEquals($studentrowsbefore, $DB->count_records(
+            'local_aigrader_submission',
+            ['studentid' => $this->student->id]
+        ));
     }
 
-    // -----------------------------------------------------------------
+    // -----------------------------------------------------------------.
     // delete_data_for_users (batch)
-    // -----------------------------------------------------------------
+    // -----------------------------------------------------------------.
 
+    /**
+     * Test delete for users batch handles student and teacher.
+     */
     public function test_delete_for_users_batch_handles_student_and_teacher(): void {
         global $DB;
 
-        $userlist = new approved_userlist($this->context, 'local_aigrader',
-            [$this->student->id, $this->teacher->id]);
+        $userlist = new approved_userlist(
+            $this->context,
+            'local_aigrader',
+            [$this->student->id, $this->teacher->id]
+        );
         provider::delete_data_for_users($userlist);
 
         // Student rows gone.
-        $this->assertEquals(0, $DB->count_records('local_aigrader_submission',
-            ['studentid' => $this->student->id]));
+        $this->assertEquals(0, $DB->count_records(
+            'local_aigrader_submission',
+            ['studentid' => $this->student->id]
+        ));
         // Teacher rows anonymised.
-        $this->assertEquals(0, $DB->count_records('local_aigrader_log',
-            ['userid' => $this->teacher->id]));
+        $this->assertEquals(0, $DB->count_records(
+            'local_aigrader_log',
+            ['userid' => $this->teacher->id]
+        ));
     }
 
-    // -----------------------------------------------------------------
-    // export_user_data
-    // -----------------------------------------------------------------
+    // -----------------------------------------------------------------.
+    // Export_user_data.
+    // -----------------------------------------------------------------.
 
+    /**
+     * Test export for student writes submission data.
+     */
     public function test_export_for_student_writes_submission_data(): void {
         $writer = writer::with_context($this->context);
         $this->assertFalse($writer->has_any_data());
@@ -289,16 +380,23 @@ final class provider_test extends \advanced_testcase {
         provider::export_user_data($approved);
 
         $writer = writer::with_context($this->context);
-        $this->assertTrue($writer->has_any_data(),
-            'Privacy export should produce some data for the student');
+        $this->assertTrue(
+            $writer->has_any_data(),
+            'Privacy export should produce some data for the student'
+        );
     }
 
+    /**
+     * Test export for teacher writes config data.
+     */
     public function test_export_for_teacher_writes_config_data(): void {
         $approved = new approved_contextlist($this->teacher, 'local_aigrader', [$this->context->id]);
         provider::export_user_data($approved);
 
         $writer = writer::with_context($this->context);
-        $this->assertTrue($writer->has_any_data(),
-            'Privacy export should produce some data for the teacher');
+        $this->assertTrue(
+            $writer->has_any_data(),
+            'Privacy export should produce some data for the teacher'
+        );
     }
 }

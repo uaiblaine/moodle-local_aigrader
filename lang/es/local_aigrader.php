@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Spanish language strings for AI Grader Pro.
  *
@@ -70,7 +85,7 @@ $string['manage_heading']           = 'AI Grader Pro: {$a}';
 $string['manage_disabled']          = 'AI Grader Pro no esta habilitado en esta tarea. Edita la configuracion de la tarea para activarlo.';
 $string['manage_no_submissions']    = 'Aun no hay entregas para esta tarea.';
 $string['manage_polling']           = 'Una calificacion esta en proceso. Esta pagina se actualizara automaticamente.';
-$string['manage_back_to_assignment']= '← Volver a la tarea';
+$string['manage_back_to_assignment'] = '← Volver a la tarea';
 $string['msg_enqueued']             = 'Tarea de calificacion IA encolada. Se ejecutara en el proximo cron.';
 
 $string['th_student']   = 'Alumno';
@@ -99,7 +114,7 @@ $string['review_pagetitle']       = 'Revisar propuesta IA · {$a}';
 $string['review_heading']         = 'Revisar propuesta IA: {$a->assign} — {$a->student}';
 $string['review_submission_text'] = 'Entrega del alumno';
 $string['review_proposed']        = 'Nota y feedback propuestos (editables)';
-$string['review_criterion_scores']= 'Puntuacion por criterio (de la IA, informativa)';
+$string['review_criterion_scores'] = 'Puntuacion por criterio (de la IA, informativa)';
 $string['review_proposed_at']     = 'Propuesta hecha el {$a}';
 $string['review_proposed_by']     = 'por {$a->provider} ({$a->model})';
 
@@ -119,7 +134,7 @@ $string['msg_rejected']       = 'Propuesta IA rechazada. Califica manualmente us
 
 $string['feedback_strengths']    = 'Aciertos';
 $string['feedback_improvements'] = 'A mejorar';
-$string['feedback_justification']= 'Resumen';
+$string['feedback_justification'] = 'Resumen';
 
 $string['errornoproposal']      = 'No hay propuesta IA disponible para esta entrega.';
 $string['errorparseproposal']   = 'La propuesta IA guardada no se ha podido leer. Recalifica para regenerarla.';
@@ -130,7 +145,7 @@ $string['review_pagetitle']       = 'Revisar propuesta IA · {$a}';
 $string['review_heading']         = 'Revisar propuesta IA: {$a->assign} — {$a->student}';
 $string['review_submission_text'] = 'Entrega del alumno';
 $string['review_proposed']        = 'Nota y feedback propuestos (editables)';
-$string['review_criterion_scores']= 'Puntuacion por criterio (de la IA, informativa)';
+$string['review_criterion_scores'] = 'Puntuacion por criterio (de la IA, informativa)';
 $string['review_proposed_at']     = 'Propuesta hecha el {$a}';
 $string['review_proposed_by']     = 'por {$a->provider} ({$a->model})';
 
@@ -152,7 +167,7 @@ $string['msg_rejected']       = 'Propuesta IA rechazada. Califica manualmente us
 
 $string['feedback_strengths']    = 'Aciertos';
 $string['feedback_improvements'] = 'A mejorar';
-$string['feedback_justification']= 'Resumen';
+$string['feedback_justification'] = 'Resumen';
 
 $string['errornoproposal']      = 'No hay propuesta IA disponible para esta entrega.';
 $string['errorparseproposal']   = 'La propuesta IA guardada no se ha podido leer. Recalifica para regenerarla.';

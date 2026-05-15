@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * CLI script: enqueue a grading task for asynchronous processing by cron.
  *
@@ -16,7 +31,7 @@ define('CLI_SCRIPT', true);
 require(__DIR__ . '/../../../config.php');
 require_once($CFG->libdir . '/clilib.php');
 
-list($options, $unrecognised) = cli_get_params(
+[$options, $unrecognised] = cli_get_params(
     [
         'submissionid' => null,
         'run'          => false,
@@ -54,7 +69,7 @@ EOT);
 global $DB, $USER;
 
 // In CLI context $USER->id may be 0 (no session). Default to admin so the
-// log entries have a meaningful userid for testing. In the future UI flow,
+// Log entries have a meaningful userid for testing. In the future UI flow,
 // $USER->id will be the teacher's id when they trigger grading.
 if (empty($USER->id)) {
     $adminuser = $DB->get_record('user', ['username' => 'admin']);

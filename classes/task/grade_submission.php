@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Adhoc task that grades a submission in the background.
  *
@@ -13,11 +28,10 @@
 namespace local_aigrader\task;
 
 use local_aigrader\manager;
-
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Class grade_submission.
+ */
 class grade_submission extends \core\task\adhoc_task {
-
     /**
      * Returns the localised name shown in Site administration > Server > Tasks.
      */
@@ -44,8 +58,8 @@ class grade_submission extends \core\task\adhoc_task {
         $result = $mgr->grade_submission($submissionid);
 
         if (!$result->success) {
-            // Throw so Moodle increments the task's fail count and reschedules
-            // with exponential backoff. The error is already persisted.
+            // Throw so Moodle increments the task's fail count and reschedules.
+            // With exponential backoff. The error is already persisted.
             throw new \moodle_exception(
                 'errortaskfailed',
                 'local_aigrader',

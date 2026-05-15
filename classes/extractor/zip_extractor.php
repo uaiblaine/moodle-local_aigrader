@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Extractor for .zip archives.
  *
@@ -19,13 +34,15 @@
  */
 
 namespace local_aigrader\extractor;
-
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Class zip_extractor.
+ */
 class zip_extractor {
-
+    /** @var int Max files we will process from a zip. */
     private const MAX_FILES_IN_ZIP   = 100;
-    private const MAX_FILE_SIZE      = 1048576;       // 1 MB
+    /** @var int Max size in bytes per individual file inside the zip. */
+    private const MAX_FILE_SIZE      = 1048576;
+    /** @var int Total wall-clock seconds we will spend on one zip. */
     private const TIME_BUDGET_SECS   = 60;
 
     /** Directories whose contents we always skip. */
@@ -41,10 +58,13 @@ class zip_extractor {
         'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg',
         'pdf', 'doc', 'xls', 'ppt',
         'mp3', 'mp4', 'mov', 'wav',
-        'zip',  // No nested zips in v0.11 — handled by outer dispatcher.
+        'zip', // No nested zips in v0.11 — handled by outer dispatcher.
     ];
 
     /**
+     * Extract content from a zip archive.
+     *
+     * @param \stored_file $file The zip uploaded by the student.
      * @return array{text: string, warnings: string[]} Text combines all
      *         file contents with --- headers; warnings list what was skipped.
      */
@@ -137,6 +157,9 @@ class zip_extractor {
         ];
     }
 
+    /**
+     * Label for.
+     */
     private static function label_for(string $name, string $ext): string {
         $codemap = [
             'py'   => 'Python', 'java' => 'Java', 'cpp' => 'C++', 'c' => 'C',
@@ -158,6 +181,9 @@ class zip_extractor {
         return 'text';
     }
 
+    /**
+     * Normalise encoding.
+     */
     private static function normalise_encoding(string $content): string {
         $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
         if ($encoding !== false && $encoding !== 'UTF-8') {
@@ -166,6 +192,9 @@ class zip_extractor {
         return $content;
     }
 
+    /**
+     * Copy to temp.
+     */
     private static function copy_to_temp(\stored_file $file): ?string {
         try {
             $tmp = tempnam(sys_get_temp_dir(), 'aigrader_zip_');

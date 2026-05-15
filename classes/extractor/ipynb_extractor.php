@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
  * Extractor for Jupyter notebooks (.ipynb).
  *
@@ -16,11 +31,13 @@
  */
 
 namespace local_aigrader\extractor;
-
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Class ipynb_extractor.
+ */
 class ipynb_extractor {
-
+    /**
+     * Extract file.
+     */
     public static function extract_file(\stored_file $file): ?string {
         $raw = $file->get_content();
         if ($raw === false || $raw === '') {
@@ -78,6 +95,9 @@ class ipynb_extractor {
         return rtrim((string) $source);
     }
 
+    /**
+     * Append outputs.
+     */
     private static function append_outputs(array &$parts, array $outputs): void {
         foreach ($outputs as $output) {
             $otype = (string) ($output['output_type'] ?? '');
