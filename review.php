@@ -321,17 +321,22 @@ function local_aigrader_format_feedback_html(array $strengths, array $improvemen
 }
 
 /**
- * Write the approved grade and feedback to m_assign_grades + assignfeedback_comments,
- * then push to the Moodle gradebook.
+ * Write the approved grade and feedback to m_assign_grades + assignfeedback_comments
+ * (when comments plugin is enabled) + push to the Moodle gradebook.
  *
  * The grader column is always the teacher's USER->id, never a system id.
+ * The feedback is also written to m_grade_grades.feedback via grade_update()
+ * so it shows in the gradebook even when the assignfeedback_comments plugin
+ * is not enabled on the assignment.
  */
 function local_aigrader_publish_grade(\stdClass $assign, int $studentid, float $grade, string $feedbackhtml): int {
     global $DB, $USER, $CFG;
+    require_once($CFG->libdir . '/gradelib.php');
 
     $now = time();
 
-    // Find or create the assign_grades row for this student's latest attempt.
+    // 1. Upsert m_assign_grades (mod_assign's own grade table; required so the
+    //    teacher's grading screen reflects the grade).
     $existing = $DB->get_record('assign_grades', [
         'assignment'    => $assign->id,
         'userid'        => $studentid,
@@ -355,17 +360,17 @@ function local_aigrader_publish_grade(\stdClass $assign, int $studentid, float $
         $gradeid = (int) $DB->insert_record('assign_grades', $rec);
     }
 
-    // Upsert assignfeedback_comments (only if the assignment has comments enabled).
-    // Note: 'value' is a TEXT column so we cannot put it in the WHERE clause directly
-    // (Moodle DML refuses it). Instead select the value and compare in PHP.
+    // 2. Upsert assignfeedback_comments — only useful if the comments plugin
+    //    is enabled on the assignment. NOTE: 'value' is a TEXT column so we
+    //    cannot use it in the WHERE clause (Moodle DML refuses); read the
+    //    value and compare in PHP.
     $cfgvalue = $DB->get_field('assign_plugin_config', 'value', [
         'assignment' => $assign->id,
         'subtype'    => 'assignfeedback',
         'plugin'     => 'comments',
         'name'       => 'enabled',
     ], IGNORE_MISSING);
-    $commentsenabled = ((string) $cfgvalue === '1');
-    if ($commentsenabled) {
+    if ((string) $cfgvalue === '1') {
         $existingcomment = $DB->get_record('assignfeedback_comments', ['grade' => $gradeid]);
         $cmt = (object) [
             'assignment'    => $assign->id,
@@ -381,8 +386,34 @@ function local_aigrader_publish_grade(\stdClass $assign, int $studentid, float $
         }
     }
 
-    // Push to gradebook.
-    assign_update_grades($assign, $studentid);
+    // 3. Push to the Moodle gradebook via gradelib. This creates the grade_item
+    //    if missing AND inserts the grade in m_grade_grades with feedback.
+    //    Crucially, it works regardless of which feedback plugins are enabled.
+    $gradeobj                  = new \stdClass();
+    $gradeobj->userid          = $studentid;
+    $gradeobj->rawgrade        = $grade;
+    $gradeobj->feedback        = $feedbackhtml;
+    $gradeobj->feedbackformat  = FORMAT_HTML;
+    $gradeobj->usermodified    = (int) $USER->id;
+    $gradeobj->dategraded      = $now;
+
+    $itemdetails = [
+        'itemname'  => $assign->name,
+        'gradetype' => GRADE_TYPE_VALUE,
+        'grademin'  => 0,
+        'grademax'  => $assign->grade > 0 ? $assign->grade : 100,
+    ];
+
+    grade_update(
+        'mod/assign',
+        (int) $assign->course,
+        'mod',
+        'assign',
+        (int) $assign->id,
+        0,
+        $gradeobj,
+        $itemdetails
+    );
 
     return $gradeid;
 }

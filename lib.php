@@ -45,3 +45,55 @@ function local_aigrader_coursemodule_validation($formwrapper, $data): array {
 function local_aigrader_coursemodule_edit_post_actions($moduleinfo, $course) {
     return assign_form_handler::save($moduleinfo, $course);
 }
+
+/**
+ * Add a link to AI Grader Pro's management page in the assignment's
+ * settings menu (the gear icon when viewing an assignment).
+ *
+ * @param settings_navigation $settingsnav
+ * @param context $context
+ */
+function local_aigrader_extend_settings_navigation(\settings_navigation $settingsnav, \context $context): void {
+    // Only act on module contexts (assignment pages).
+    if ($context->contextlevel !== CONTEXT_MODULE) {
+        return;
+    }
+    $cm = get_coursemodule_from_id('', $context->instanceid, 0, false, IGNORE_MISSING);
+    if (!$cm || $cm->modname !== 'assign') {
+        return;
+    }
+
+    // Global plugin enable check.
+    if (!get_config('local_aigrader', 'enabled')) {
+        return;
+    }
+
+    // Capability check.
+    if (!has_capability('local/aigrader:use', $context)) {
+        return;
+    }
+
+    // Only show the link if AI Grader Pro is enabled on THIS assignment.
+    global $DB;
+    $config = $DB->get_record('local_aigrader_assign', ['assignid' => $cm->instance]);
+    if (!$config || empty($config->enabled)) {
+        return;
+    }
+
+    // Find the assignment's settings node (modulesettings).
+    $modulenode = $settingsnav->find('modulesettings', \settings_navigation::TYPE_SETTING);
+    if (!$modulenode) {
+        return;
+    }
+
+    $url  = new \moodle_url('/local/aigrader/manage.php', ['cmid' => $cm->id]);
+    $node = \navigation_node::create(
+        get_string('pluginname', 'local_aigrader'),
+        $url,
+        \navigation_node::TYPE_SETTING,
+        null,
+        'local_aigrader_manage',
+        new \pix_icon('i/scales', '')
+    );
+    $modulenode->add_node($node);
+}
