@@ -10,7 +10,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051508;           // YYYYMMDDXX. Full Privacy provider (GDPR + AI Act).
+$plugin->version   = 2026051509;           // YYYYMMDDXX. Extractors for docx + code + zip + ipynb.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_ALPHA;       // Pre-MVP.
-$plugin->release   = 'v0.10.0-alpha';
+$plugin->release   = 'v0.11.0-alpha';

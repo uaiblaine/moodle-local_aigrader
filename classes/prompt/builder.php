@@ -19,7 +19,7 @@
 
 namespace local_aigrader\prompt;
 
-use local_aigrader\extractor\text_extractor;
+use local_aigrader\extractor\dispatcher as extractor_dispatcher;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -79,7 +79,7 @@ EOT;
 
         $language = self::resolve_language($config, $assign);
 
-        $extraction = text_extractor::extract($submissionid);
+        $extraction = extractor_dispatcher::extract($submissionid);
         if (!$extraction->is_ok()) {
             throw new \moodle_exception(
                 'errorextraction',

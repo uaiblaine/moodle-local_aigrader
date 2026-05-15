@@ -51,7 +51,7 @@ EOT);
 
 $submissionid = (int) $options['submissionid'];
 
-$result = \local_aigrader\extractor\text_extractor::extract($submissionid);
+$result = \local_aigrader\extractor\dispatcher::extract($submissionid);
 
 if ($options['raw']) {
     cli_writeln($result->text);
