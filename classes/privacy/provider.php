@@ -115,42 +115,58 @@ class provider implements
     // ---------------------------------------------------------------------
 
     public static function get_contexts_for_userid(int $userid): contextlist {
+        global $DB;
         $contextlist = new contextlist();
 
-        // Per-assignment config: user appears as usermodified.
-        $sql = "SELECT ctx.id
-                  FROM {context} ctx
-                  JOIN {course_modules} cm ON cm.id = ctx.instanceid
-                  JOIN {modules} m ON m.id = cm.module AND m.name = :modname1
-                  JOIN {local_aigrader_assign} laa ON laa.assignid = cm.instance
-                 WHERE ctx.contextlevel = :ctxlevel1
-                   AND laa.usermodified = :uid1";
-        $params = ['modname1' => 'assign', 'ctxlevel1' => CONTEXT_MODULE, 'uid1' => $userid];
-        $contextlist->add_from_sql($sql, $params);
+        // Step 1: collect every assignid where this user has data (as student,
+        // final_grader, log userid, log studentid, or config usermodified).
+        $assignids = [];
 
-        // Submission rows: user appears as studentid OR final_grader.
-        $sql = "SELECT ctx.id
-                  FROM {context} ctx
-                  JOIN {course_modules} cm ON cm.id = ctx.instanceid
-                  JOIN {modules} m ON m.id = cm.module AND m.name = :modname1
-                  JOIN {local_aigrader_submission} las ON las.assignid = cm.instance
-                 WHERE ctx.contextlevel = :ctxlevel1
-                   AND (las.studentid = :uid1 OR las.final_grader = :uid2)";
-        $params = ['modname1' => 'assign', 'ctxlevel1' => CONTEXT_MODULE,
-                   'uid1' => $userid, 'uid2' => $userid];
-        $contextlist->add_from_sql($sql, $params);
+        foreach ($DB->get_fieldset_select(
+            'local_aigrader_assign', 'assignid',
+            'usermodified = ?', [$userid]
+        ) as $aid) {
+            $assignids[(int) $aid] = (int) $aid;
+        }
 
-        // Log rows: user appears as userid (teacher) OR studentid.
+        $rows = $DB->get_records_sql(
+            "SELECT DISTINCT assignid
+               FROM {local_aigrader_submission}
+              WHERE studentid = :uid1 OR final_grader = :uid2",
+            ['uid1' => $userid, 'uid2' => $userid]
+        );
+        foreach ($rows as $row) {
+            $assignids[(int) $row->assignid] = (int) $row->assignid;
+        }
+
+        $rows = $DB->get_records_sql(
+            "SELECT DISTINCT las.assignid
+               FROM {local_aigrader_submission} las
+               JOIN {local_aigrader_log} lal ON lal.submissionid = las.submissionid
+              WHERE lal.userid = :uid1 OR lal.studentid = :uid2",
+            ['uid1' => $userid, 'uid2' => $userid]
+        );
+        foreach ($rows as $row) {
+            $assignids[(int) $row->assignid] = (int) $row->assignid;
+        }
+
+        if (empty($assignids)) {
+            return $contextlist;
+        }
+
+        // Step 2: resolve those assign ids to course-module context ids.
+        [$insql, $inparams] = $DB->get_in_or_equal(array_keys($assignids), SQL_PARAMS_NAMED, 'aid');
+        $params = array_merge($inparams, [
+            'modname'  => 'assign',
+            'ctxlevel' => CONTEXT_MODULE,
+        ]);
         $sql = "SELECT ctx.id
                   FROM {context} ctx
                   JOIN {course_modules} cm ON cm.id = ctx.instanceid
-                  JOIN {modules} m ON m.id = cm.module AND m.name = :modname1
-                  JOIN {local_aigrader_submission} las ON las.assignid = cm.instance
-                  JOIN {local_aigrader_log} lal ON lal.submissionid = las.submissionid
-                 WHERE ctx.contextlevel = :ctxlevel1
-                   AND (lal.userid = :uid1 OR lal.studentid = :uid2)";
-        $params = ['modname1' => 'assign', 'ctxlevel1' => CONTEXT_MODULE,
-                   'uid1' => $userid, 'uid2' => $userid];
+                  JOIN {modules} m ON m.id = cm.module
+                 WHERE ctx.contextlevel = :ctxlevel
+                   AND m.name = :modname
+                   AND cm.instance $insql";
         $contextlist->add_from_sql($sql, $params);
 
         return $contextlist;
@@ -161,39 +177,43 @@ class provider implements
         if ($context->contextlevel !== CONTEXT_MODULE) {
             return;
         }
-        $cm = get_coursemodule_from_id('assign', $context->instanceid, 0, false, IGNORE_MISSING);
-        if (!$cm) {
+        // Use a permissive lookup (any module type) then filter — the strict
+        // 'assign' variant returns false in some PHPUnit-bootstrapped contexts.
+        $cm = get_coursemodule_from_id('', $context->instanceid, 0, false, IGNORE_MISSING);
+        if (!$cm || $cm->modname !== 'assign') {
             return;
         }
         $assignid = (int) $cm->instance;
 
         // Config: usermodified.
         $userlist->add_from_sql('usermodified',
-            "SELECT usermodified FROM {local_aigrader_assign} WHERE assignid = ?",
-            [$assignid]);
+            "SELECT usermodified FROM {local_aigrader_assign}
+              WHERE assignid = :aid",
+            ['aid' => $assignid]);
 
         // Submission: studentid and final_grader.
         $userlist->add_from_sql('studentid',
-            "SELECT studentid FROM {local_aigrader_submission} WHERE assignid = ?",
-            [$assignid]);
+            "SELECT studentid FROM {local_aigrader_submission}
+              WHERE assignid = :aid",
+            ['aid' => $assignid]);
         $userlist->add_from_sql('final_grader',
             "SELECT final_grader FROM {local_aigrader_submission}
-              WHERE assignid = ? AND final_grader IS NOT NULL",
-            [$assignid]);
+              WHERE assignid = :aid AND final_grader IS NOT NULL",
+            ['aid' => $assignid]);
 
         // Log: userid (teacher) and studentid.
         $userlist->add_from_sql('userid',
             "SELECT lal.userid
                FROM {local_aigrader_log} lal
                JOIN {local_aigrader_submission} las ON las.submissionid = lal.submissionid
-              WHERE las.assignid = ?",
-            [$assignid]);
+              WHERE las.assignid = :aid",
+            ['aid' => $assignid]);
         $userlist->add_from_sql('studentid',
             "SELECT lal.studentid
                FROM {local_aigrader_log} lal
                JOIN {local_aigrader_submission} las ON las.submissionid = lal.submissionid
-              WHERE las.assignid = ?",
-            [$assignid]);
+              WHERE las.assignid = :aid",
+            ['aid' => $assignid]);
     }
 
     public static function export_user_data(approved_contextlist $contextlist): void {
