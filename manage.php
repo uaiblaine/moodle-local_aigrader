@@ -110,6 +110,15 @@ $PAGE->set_pagelayout('incourse');
 $PAGE->set_title(get_string('manage_pagetitle', 'local_aigrader', format_string($assign->name)));
 $PAGE->set_heading($course->fullname);
 
+// Hide the activity header (which would re-render the assignment intro at
+// the top of the page). The teacher already knows the assignment from the
+// breadcrumb and the heading below; surfacing the intro here pushes the
+// grading queue — and any failure banner — below the fold. `activityheader`
+// is a magic property on $PAGE that is always defined (lazily), so we just
+// call it directly.
+$PAGE->activityheader->set_attrs(['hidecompletion' => true]);
+$PAGE->activityheader->disable();
+
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('manage_heading', 'local_aigrader', format_string($assign->name)));
 
@@ -170,6 +179,11 @@ if ($haspending) {
         \core\output\notification::NOTIFY_INFO
     );
 }
+
+// Teacher-only banner aggregating any AI-grading failures, grouped by error
+// kind. Renders before the table so the teacher cannot miss it. Students
+// never reach this page (capability local/aigrader:use is checked above).
+echo \local_aigrader\output\error_banner::render($rows, $cmid);
 
 $table = new html_table();
 $table->head = [
@@ -265,9 +279,13 @@ function local_aigrader_render_status(?string $status, ?string $errormsg): strin
         case 'published':
             return html_writer::span(get_string('status_published', 'local_aigrader'), 'badge bg-success');
         case 'error':
+            // Truncate the raw error and drop provider marketing tails (e.g.
+            // Groq's "Upgrade to Dev Tier..." URL). The full text is still
+            // available in the banner's "Show raw error" disclosure.
             $badge = html_writer::span(get_string('status_error', 'local_aigrader'), 'badge bg-danger');
             if ($errormsg) {
-                $badge .= ' ' . html_writer::span(s($errormsg), 'small text-muted');
+                $short = \local_aigrader\error_classifier::summarize_raw($errormsg);
+                $badge .= ' ' . html_writer::span(s($short), 'small text-muted');
             }
             return $badge;
         case 'unsupported_format':

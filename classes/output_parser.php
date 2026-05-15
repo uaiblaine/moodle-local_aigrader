@@ -106,15 +106,21 @@ class output_parser {
             ? $data['feedback_language']
             : '';
 
+        // Note on the underscore-vs-no-underscore split: the value object
+        // PROPERTIES keep underscores (criterion_scores, cleaned_json,
+        // raw_response) to mirror DB column names, but the constructor
+        // PARAMETERS dropped them during phpcs cleanup to satisfy
+        // moodle-cs ValidVariableName. Keep the named args here in sync
+        // with the parameter names, not with the property names.
         return parsed_proposal::success(
             grade: round($grade, 2),
-            criterion_scores: $criteria,
+            criterionscores: $criteria,
             strengths: $strengths,
             improvements: $improvements,
             justification: trim($data['justification']),
             language: $language,
-            cleaned_json: $cleaned,
-            raw_response: $raw
+            cleanedjson: $cleaned,
+            rawresponse: $raw
         );
     }
 

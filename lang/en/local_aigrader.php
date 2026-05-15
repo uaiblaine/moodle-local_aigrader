@@ -219,3 +219,46 @@ $string['privacy:metadata:log:timecreated']    = 'Time when the action was recor
 $string['privacy:metadata:ai_subsystem']             = 'AI Grader Pro sends the student\'s submission text together with the teacher\'s evaluation criteria to the LLM provider configured in Moodle\'s AI Subsystem. The provider may be hosted in or outside the EU depending on the institution\'s choice. The site administrator signs a Data Processing Agreement (DPA) with the chosen provider.';
 $string['privacy:metadata:ai_subsystem:prompt_text'] = 'The student\'s submission text plus the teacher\'s criteria and grading instructions.';
 $string['privacy:metadata:ai_subsystem:userid']      = 'A user identifier passed to the LLM provider for rate-limiting and abuse-prevention (the provider\'s privacy policy applies).';
+
+// Classified error banner (shown only to teachers — never to students).
+$string['err_banner_title']         = 'AI grading failed';
+$string['err_banner_title_plural']  = 'AI grading failed on {$a} submissions';
+$string['err_banner_affecting']     = 'Affecting: {$a}';
+$string['err_banner_show_details']  = 'Show raw error';
+$string['err_banner_retry']         = 'Retry now';
+
+// Payload too large.
+$string['err_payload_too_large_headline'] = 'Submission exceeds the model\'s size limit';
+$string['err_payload_too_large_body']     = 'The submission was {$a->requested} tokens but the configured model "{$a->model}" only accepts {$a->limit} tokens per minute on the current plan.';
+$string['err_payload_too_large_body_partial'] = 'The submission exceeded the configured model\'s tokens-per-minute limit.';
+$string['err_payload_too_large_action']   = 'Switch to a model with a higher TPM limit in Site administration → AI → Providers, or ask the student to remove notebook outputs before submitting again.';
+
+// Unauthorized.
+$string['err_unauthorized_headline'] = 'Provider rejected the API key';
+$string['err_unauthorized_body']     = 'The LLM provider returned an authentication error. The API key is missing, invalid, or has been revoked.';
+$string['err_unauthorized_action']   = 'Go to Site administration → AI → Providers and check the API key for the active provider.';
+
+// Rate limited.
+$string['err_rate_limited_headline'] = 'Provider rate limit hit';
+$string['err_rate_limited_body']     = 'Too many grading requests have been sent in a short period. Moodle will retry automatically with exponential backoff.';
+$string['err_rate_limited_action']   = 'No action needed. The grading will resume once the rate limit window resets.';
+
+// 5xx provider error.
+$string['err_provider_error_headline'] = 'Provider service error';
+$string['err_provider_error_body']     = 'The LLM provider returned a temporary server error. Moodle will retry automatically.';
+$string['err_provider_error_action']   = 'No action needed. If the problem persists for more than 15 minutes, check the provider\'s status page.';
+
+// Network error.
+$string['err_network_error_headline'] = 'Could not reach the LLM provider';
+$string['err_network_error_body']     = 'The connection to the LLM provider failed (timeout, DNS error, or connection refused).';
+$string['err_network_error_action']   = 'Check the site\'s network connectivity and the provider endpoint URL. Moodle will retry automatically.';
+
+// Parse error.
+$string['err_parse_error_headline'] = 'LLM returned a malformed response';
+$string['err_parse_error_body']     = 'The model produced output that could not be parsed into the expected JSON grading format.';
+$string['err_parse_error_action']   = 'Use "Retry now" to call the model again. If the problem persists, the criteria text may be encouraging free-form prose — review the evaluation criteria.';
+
+// Unknown / catch-all.
+$string['err_unknown_headline'] = 'AI grading failed';
+$string['err_unknown_body']     = 'The provider returned an error: {$a}';
+$string['err_unknown_action']   = 'See the audit log for full details, then try again.';

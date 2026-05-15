@@ -219,3 +219,46 @@ $string['privacy:metadata:log:timecreated']    = 'Momento en que se registro la 
 $string['privacy:metadata:ai_subsystem']             = 'AI Grader Pro envia el texto de la entrega del alumno junto con los criterios de evaluacion del profesor al proveedor LLM configurado en el AI Subsystem de Moodle. El proveedor puede estar alojado dentro o fuera de la UE segun la eleccion de la institucion. El administrador del sitio firma un Data Processing Agreement (DPA) con el proveedor elegido.';
 $string['privacy:metadata:ai_subsystem:prompt_text'] = 'Texto de la entrega del alumno junto con los criterios e instrucciones de calificacion del profesor.';
 $string['privacy:metadata:ai_subsystem:userid']      = 'Identificador de usuario pasado al proveedor LLM para rate-limiting y prevencion de abuso (aplica la politica de privacidad del proveedor).';
+
+// Banner de errores clasificados (solo profesor, nunca al alumno).
+$string['err_banner_title']         = 'La calificacion con IA fallo';
+$string['err_banner_title_plural']  = 'La calificacion con IA fallo en {$a} entregas';
+$string['err_banner_affecting']     = 'Afecta a: {$a}';
+$string['err_banner_show_details']  = 'Ver error tecnico';
+$string['err_banner_retry']         = 'Reintentar ahora';
+
+// Payload demasiado grande.
+$string['err_payload_too_large_headline'] = 'La entrega supera el limite del modelo';
+$string['err_payload_too_large_body']     = 'La entrega ocupa {$a->requested} tokens pero el modelo configurado "{$a->model}" solo acepta {$a->limit} tokens por minuto en el plan actual.';
+$string['err_payload_too_large_body_partial'] = 'La entrega supero el limite de tokens por minuto del modelo configurado.';
+$string['err_payload_too_large_action']   = 'Cambia a un modelo con mayor limite TPM en Administracion del sitio -> IA -> Proveedores, o pide al alumno que elimine los outputs del notebook antes de volver a entregar.';
+
+// No autorizado.
+$string['err_unauthorized_headline'] = 'El proveedor rechazo la API key';
+$string['err_unauthorized_body']     = 'El proveedor LLM devolvio un error de autenticacion. La API key no existe, es invalida o ha sido revocada.';
+$string['err_unauthorized_action']   = 'Ve a Administracion del sitio -> IA -> Proveedores y revisa la API key del proveedor activo.';
+
+// Rate limit.
+$string['err_rate_limited_headline'] = 'Limite de peticiones por minuto superado';
+$string['err_rate_limited_body']     = 'Se han enviado demasiadas peticiones de calificacion en poco tiempo. Moodle reintentara automaticamente con backoff exponencial.';
+$string['err_rate_limited_action']   = 'No hay nada que hacer. La calificacion se reanudara cuando se libere la cuota.';
+
+// Error 5xx del proveedor.
+$string['err_provider_error_headline'] = 'Error temporal del proveedor';
+$string['err_provider_error_body']     = 'El proveedor LLM devolvio un error de servidor temporal. Moodle reintentara automaticamente.';
+$string['err_provider_error_action']   = 'No hay nada que hacer. Si el problema persiste mas de 15 minutos, revisa la pagina de estado del proveedor.';
+
+// Error de red.
+$string['err_network_error_headline'] = 'No se pudo conectar con el proveedor LLM';
+$string['err_network_error_body']     = 'La conexion con el proveedor LLM fallo (timeout, error de DNS o conexion rechazada).';
+$string['err_network_error_action']   = 'Revisa la conectividad de red del sitio y la URL del endpoint del proveedor. Moodle reintentara automaticamente.';
+
+// Error de parseo.
+$string['err_parse_error_headline'] = 'El LLM devolvio una respuesta no valida';
+$string['err_parse_error_body']     = 'El modelo produjo una salida que no se pudo parsear al formato JSON de calificacion esperado.';
+$string['err_parse_error_action']   = 'Pulsa "Reintentar ahora" para volver a llamar al modelo. Si el problema persiste, los criterios pueden estar invitando a respuestas en prosa libre; revisa los criterios de evaluacion.';
+
+// Desconocido (catch-all).
+$string['err_unknown_headline'] = 'La calificacion con IA fallo';
+$string['err_unknown_body']     = 'El proveedor devolvio un error: {$a}';
+$string['err_unknown_action']   = 'Consulta los detalles en el audit log y vuelve a intentarlo.';

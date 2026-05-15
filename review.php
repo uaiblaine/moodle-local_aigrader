@@ -166,6 +166,10 @@ $PAGE->set_pagelayout('incourse');
 $PAGE->set_title(get_string('review_pagetitle', 'local_aigrader', format_string($assign->name)));
 $PAGE->set_heading($course->fullname);
 
+// Same reasoning as on manage.php: hide the activity header so the AI
+// proposal review form is not pushed below the fold by the assignment intro.
+$PAGE->activityheader->disable();
+
 $student = $DB->get_record(
     'user',
     ['id' => $proposalrow->studentid],
