@@ -157,3 +157,50 @@ $string['feedback_justification']= 'Summary';
 $string['errornoproposal']      = 'No AI proposal is available for this submission.';
 $string['errorparseproposal']   = 'The stored AI proposal could not be parsed. Try re-grading.';
 $string['errorgradeoutofrange'] = 'The grade must be between 0 and 10 (received: {$a}).';
+
+// Privacy provider strings (replaces the v0.1.0 placeholder).
+$string['privacy:metadata'] = 'AI Grader Pro stores AI-assisted grading proposals, audit logs of every grading action, and per-assignment configuration. Personal data is also sent to an external Large Language Model (LLM) provider via Moodle\'s AI Subsystem.';
+
+// Per-assignment configuration table.
+$string['privacy:metadata:assign']               = 'Per-assignment AI Grader Pro configuration (which assignments are enabled, the evaluation criteria, and per-assignment overrides). Stores the id of the teacher who last edited the configuration.';
+$string['privacy:metadata:assign:assignid']      = 'Internal id of the assignment.';
+$string['privacy:metadata:assign:criteria_text'] = 'Evaluation criteria written by the teacher in natural language.';
+$string['privacy:metadata:assign:usermodified']  = 'Id of the teacher who last edited the configuration. Anonymised on user deletion.';
+$string['privacy:metadata:assign:timecreated']   = 'Time when the configuration was first saved.';
+$string['privacy:metadata:assign:timemodified']  = 'Time when the configuration was last modified.';
+
+// Per-submission AI proposal state.
+$string['privacy:metadata:submission']                   = 'Per-submission state of the AI grading process: the proposed grade and feedback, plus the final grade and feedback approved by the teacher.';
+$string['privacy:metadata:submission:submissionid']      = 'Id of the assignment submission this proposal refers to.';
+$string['privacy:metadata:submission:studentid']         = 'Id of the student whose submission was graded.';
+$string['privacy:metadata:submission:status']            = 'Current state in the AI grading state machine (pending_ai / ai_proposed / teacher_reviewed / published / error).';
+$string['privacy:metadata:submission:proposed_grade']    = 'Grade proposed by the LLM (0-10).';
+$string['privacy:metadata:submission:proposed_feedback'] = 'Full LLM response: criterion scores, strengths, improvements, justification.';
+$string['privacy:metadata:submission:final_grade']       = 'Grade approved by the teacher (may differ from proposed if the teacher edited).';
+$string['privacy:metadata:submission:final_feedback']    = 'Feedback approved by the teacher and shown to the student.';
+$string['privacy:metadata:submission:final_grader']      = 'Id of the teacher who approved the grade. Anonymised on user deletion.';
+$string['privacy:metadata:submission:timecreated']       = 'Time when the AI grading was first queued.';
+$string['privacy:metadata:submission:timemodified']      = 'Time of the last modification.';
+$string['privacy:metadata:submission:timeprocessed']     = 'Time when the LLM call finished.';
+$string['privacy:metadata:submission:timepublished']     = 'Time when the teacher approved and the grade was written to the gradebook.';
+
+// Audit log table.
+$string['privacy:metadata:log']                = 'Append-only audit log of every AI grading action. Required by the AI Act (Reg. 2024/1689 Annex III) for high-risk AI systems in education.';
+$string['privacy:metadata:log:userid']         = 'Id of the teacher who triggered the action. Anonymised on user deletion.';
+$string['privacy:metadata:log:studentid']      = 'Id of the student whose submission was processed.';
+$string['privacy:metadata:log:action']         = 'Type of action recorded (grade, regrade, edit, approve, reject).';
+$string['privacy:metadata:log:llm_provider']   = 'Name of the LLM provider used (e.g. openai, azureai).';
+$string['privacy:metadata:log:llm_model']      = 'Identifier of the LLM model used (e.g. llama-3.3-70b-versatile).';
+$string['privacy:metadata:log:prompt_text']    = 'Full prompt sent to the LLM (includes the student\'s submission text).';
+$string['privacy:metadata:log:response_json']  = 'Raw response from the LLM as JSON (includes proposed grade and feedback).';
+$string['privacy:metadata:log:tokens_input']   = 'Number of input tokens consumed by the LLM call.';
+$string['privacy:metadata:log:tokens_output']  = 'Number of output tokens consumed by the LLM call.';
+$string['privacy:metadata:log:proposed_grade'] = 'Grade proposed by the LLM at the time of the action.';
+$string['privacy:metadata:log:final_grade']    = 'Final grade after teacher review (if applicable).';
+$string['privacy:metadata:log:teacher_edits']  = 'JSON diff showing how the teacher modified the AI proposal.';
+$string['privacy:metadata:log:timecreated']    = 'Time when the action was recorded.';
+
+// External LLM provider (data transferred outside Moodle).
+$string['privacy:metadata:ai_subsystem']             = 'AI Grader Pro sends the student\'s submission text together with the teacher\'s evaluation criteria to the LLM provider configured in Moodle\'s AI Subsystem. The provider may be hosted in or outside the EU depending on the institution\'s choice. The site administrator signs a Data Processing Agreement (DPA) with the chosen provider.';
+$string['privacy:metadata:ai_subsystem:prompt_text'] = 'The student\'s submission text plus the teacher\'s criteria and grading instructions.';
+$string['privacy:metadata:ai_subsystem:userid']      = 'A user identifier passed to the LLM provider for rate-limiting and abuse-prevention (the provider\'s privacy policy applies).';
