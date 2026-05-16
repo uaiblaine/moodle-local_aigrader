@@ -15,6 +15,14 @@ amd/build/
 *.min.js
 *.min.css
 
+# Excepción: thirdparty/vendor/ SÍ se commitea. Contiene librerías de
+# terceros vendorizadas (smalot/pdfparser para extracción de PDF, etc.)
+# de modo que el plugin funcione sin que el admin tenga que correr
+# composer en el servidor. La cláusula "vendor/" de arriba seguiría
+# excluyéndola sin estas excepciones.
+!thirdparty/vendor/
+!thirdparty/vendor/**
+
 # Dependencias generadas por composer/npm
 composer.lock
 package-lock.json

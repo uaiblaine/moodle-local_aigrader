@@ -152,8 +152,9 @@ class dispatcher implements extractor_interface {
                 fn($w) => stripos($w, 'unsupported') !== false
             ));
             return extraction_result::needs_review(
-                'All submitted files are in unsupported formats. '
-                . 'Supported: .txt, .md, .docx, .ipynb, .zip, code files. '
+                'All submitted files are unparseable. '
+                . 'Supported: .txt, .md, .docx, .ipynb, .pdf (≤5 MB, text-based), '
+                . '.zip, code files. '
                 . 'Skipped: ' . implode('; ', $skipped),
                 $skipped
             );
@@ -204,6 +205,18 @@ class dispatcher implements extractor_interface {
                 return self::unsupported($filename, 'ipynb (could not parse JSON)');
             }
             return self::wrap_simple($filename, $text, extraction_result::FORMAT_IPYNB, $warnings);
+        }
+
+        if ($ext === 'pdf') {
+            $text = pdf_extractor::extract_file($file);
+            if ($text === null) {
+                // Could be: oversized PDF, image-only scan, parse error.
+                // The teacher gets the existing "unsupported" warning, which
+                // — when ALL files in the submission end up here — escalates
+                // to needs_review via decide_outcome().
+                return self::unsupported($filename, 'pdf (too large, image-only, or unparseable)');
+            }
+            return self::wrap_simple($filename, $text, extraction_result::FORMAT_PDF, $warnings);
         }
 
         if ($ext === 'zip') {

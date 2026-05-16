@@ -70,7 +70,8 @@ final class dispatcher_outcome_test extends \advanced_testcase {
 
         $this->assertTrue($out->is_needs_review(), 'PDF-only submission must be flagged for manual review');
         $this->assertFalse($out->is_ok(), 'PDF-only must not look like a normal extraction');
-        $this->assertStringContainsString('unsupported formats', $out->error);
+        $this->assertStringContainsString('unparseable', $out->error,
+            'message must clearly flag unparseable input');
         $this->assertStringContainsString('research.pdf', $out->error,
             'reason text must surface the offending file name');
         $this->assertContains('research.pdf unsupported: pdf', $out->warnings);

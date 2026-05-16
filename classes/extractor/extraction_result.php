@@ -52,6 +52,9 @@ class extraction_result {
     /** Format identifier for Jupyter notebooks (.ipynb). */
     public const FORMAT_IPYNB       = 'ipynb';
 
+    /** Format identifier for PDF files (text extracted via smalot/pdfparser). */
+    public const FORMAT_PDF         = 'pdf';
+
     /** Format identifier used when multiple types are combined. */
     public const FORMAT_MIXED       = 'mixed';
 
