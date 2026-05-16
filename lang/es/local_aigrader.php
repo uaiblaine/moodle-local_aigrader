@@ -116,6 +116,8 @@ $string['review_proposed']        = 'Nota y feedback propuestos (editables)';
 $string['review_criterion_scores'] = 'Puntuacion por criterio (de la IA, informativa)';
 $string['review_proposed_at']     = 'Propuesta hecha el {$a}';
 $string['review_proposed_by']     = 'por {$a->provider} ({$a->model})';
+$string['manualfallback_banner']  = 'La calificación con IA no estuvo disponible para esta entrega, por lo que el formulario está vacío. Rellena nota y feedback manualmente; "Aprobar y publicar" los escribe al gradebook igual que con las propuestas IA. Motivo:';
+$string['manualfallback_default'] = 'no hay propuesta IA registrada para esta entrega.';
 $string['review_submission_files']        = 'Ficheros adjuntos';
 $string['review_submission_seen_by_ai']   = 'Entrega tal y como la vio la IA';
 

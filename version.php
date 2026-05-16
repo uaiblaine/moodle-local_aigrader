@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051604;           // YYYYMMDDXX. v1.0.4: + specific PDF skip-reason (too large vs unparseable).
+$plugin->version   = 2026051605;           // YYYYMMDDXX. v1.0.4: + manual review fallback for unsupported_format / error rows.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
 $plugin->release   = 'v1.0.4-beta';

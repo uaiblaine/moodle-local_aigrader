@@ -116,6 +116,8 @@ $string['review_proposed']        = 'Proposed grade and feedback (editable)';
 $string['review_criterion_scores'] = 'Criterion scores (from AI, for context)';
 $string['review_proposed_at']     = 'Proposed at {$a}';
 $string['review_proposed_by']     = 'by {$a->provider} ({$a->model})';
+$string['manualfallback_banner']  = 'AI grading was not available for this submission, so the form below is empty. Fill in the grade and feedback manually; "Approve and publish" will write them to the gradebook the same way as for AI proposals. Reason:';
+$string['manualfallback_default'] = 'no AI proposal recorded for this submission.';
 $string['review_submission_files']        = 'Attached files';
 $string['review_submission_seen_by_ai']   = 'Submission as seen by the AI';
 

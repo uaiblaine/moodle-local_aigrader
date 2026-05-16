@@ -211,8 +211,16 @@ foreach ($rows as $r) {
 
     $action = '';
 
-    // If there's a proposal to review, that's the primary CTA.
-    if (in_array($r->ai_status, ['ai_proposed', 'teacher_reviewed', 'published'], true)) {
+    // Primary CTA: a "Revisar →" link to review.php.
+    //   - For submissions WITH an AI proposal (ai_proposed / teacher_reviewed / published)
+    //     review.php pre-fills the form with the AI's grade and feedback.
+    //   - For submissions WITHOUT a usable AI proposal (unsupported_format, error)
+    //     review.php opens the same form with empty defaults so the teacher can
+    //     grade by hand without leaving AI Grader Pro for Moodle's native grader.
+    //   - Hidden only for: NULL (never run) and pending_ai (in flight).
+    $reviewablestatuses = ['ai_proposed', 'teacher_reviewed', 'published',
+        'unsupported_format', 'error'];
+    if (in_array($r->ai_status, $reviewablestatuses, true)) {
         $reviewlabel = $r->ai_status === 'published'
             ? get_string('btn_view_published', 'local_aigrader')
             : get_string('btn_review', 'local_aigrader');

@@ -53,13 +53,39 @@ $proposalrow = $DB->get_record(
     MUST_EXIST
 );
 
-if (!in_array($proposalrow->status, ['ai_proposed', 'teacher_reviewed', 'published'], true)) {
+// Allowed statuses:
+//   ai_proposed / teacher_reviewed / published — there is a proposal to review.
+//   unsupported_format / error                — there is NO proposal because the
+//     AI could not process the submission, but the teacher should still be
+//     able to grade manually here (same UI, same save_grade path) without
+//     having to go to Moodle's native grader. The form renders with empty
+//     defaults; nothing is pre-filled.
+$manualfallbackstatuses = ['unsupported_format', 'error'];
+$allowedstatuses = array_merge(
+    ['ai_proposed', 'teacher_reviewed', 'published'],
+    $manualfallbackstatuses
+);
+if (!in_array($proposalrow->status, $allowedstatuses, true)) {
     throw new \moodle_exception('errornoproposal', 'local_aigrader');
 }
 
-$proposed = json_decode((string) $proposalrow->proposed_feedback, true);
-if (!is_array($proposed)) {
-    throw new \moodle_exception('errorparseproposal', 'local_aigrader');
+$ismanualfallback = in_array($proposalrow->status, $manualfallbackstatuses, true);
+
+if ($ismanualfallback) {
+    // No AI proposal exists — render the form with empty defaults so the
+    // teacher can fill in a grade and feedback by hand.
+    $proposed = [
+        'final_grade'      => 0,
+        'criterion_scores' => [],
+        'strengths'        => [],
+        'improvements'     => [],
+        'justification'    => '',
+    ];
+} else {
+    $proposed = json_decode((string) $proposalrow->proposed_feedback, true);
+    if (!is_array($proposed)) {
+        throw new \moodle_exception('errorparseproposal', 'local_aigrader');
+    }
 }
 
 // If we already published before, prefer the final (edited) feedback for the form defaults.
@@ -187,6 +213,20 @@ echo $OUTPUT->heading(get_string('review_heading', 'local_aigrader', [
     'assign'  => format_string($assign->name),
     'student' => fullname($student),
 ]));
+
+// When the AI could not process the submission (PDF too large, image-only,
+// all-unsupported-formats, transient LLM failure, parse error) the row is
+// still reviewable — the teacher just fills the form by hand. Surface why
+// the AI didn't run so the teacher understands what they're looking at.
+if ($ismanualfallback) {
+    $reason = $proposalrow->error_message
+        ? s(\local_aigrader\error_classifier::summarize_raw($proposalrow->error_message))
+        : get_string('manualfallback_default', 'local_aigrader');
+    echo $OUTPUT->notification(
+        get_string('manualfallback_banner', 'local_aigrader') . ' ' . $reason,
+        \core\output\notification::NOTIFY_WARNING
+    );
+}
 
 // ---------------------------------------------------------------------.
 // Student submission (read-only): list of attached files + extracted text
