@@ -208,13 +208,23 @@ class dispatcher implements extractor_interface {
         }
 
         if ($ext === 'pdf') {
+            // Distinguish "too big" from "parsed but empty" so the teacher
+            // gets an actionable reason. The size check is duplicated here
+            // and inside pdf_extractor (defense in depth + lets us format
+            // the user-facing message with the actual MB).
+            if ($file->get_filesize() > pdf_extractor::MAX_FILESIZE_BYTES) {
+                return self::unsupported($filename, sprintf(
+                    'pdf too large (%s MB; max %s MB to keep memory usage bounded — see plugin README)',
+                    number_format($file->get_filesize() / 1048576, 1),
+                    number_format(pdf_extractor::MAX_FILESIZE_BYTES / 1048576, 1)
+                ));
+            }
             $text = pdf_extractor::extract_file($file);
             if ($text === null) {
-                // Could be: oversized PDF, image-only scan, parse error.
-                // The teacher gets the existing "unsupported" warning, which
-                // — when ALL files in the submission end up here — escalates
-                // to needs_review via decide_outcome().
-                return self::unsupported($filename, 'pdf (too large, image-only, or unparseable)');
+                return self::unsupported(
+                    $filename,
+                    'pdf has no extractable text (image-only scan or corrupt content)'
+                );
             }
             return self::wrap_simple($filename, $text, extraction_result::FORMAT_PDF, $warnings);
         }
