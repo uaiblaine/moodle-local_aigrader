@@ -29,10 +29,11 @@
 namespace local_aigrader\extractor;
 
 /**
+ * Tests for the PDF extractor wrapping the bundled smalot/pdfparser.
+ *
  * @covers \local_aigrader\extractor\pdf_extractor
  */
 final class pdf_extractor_test extends \advanced_testcase {
-
     /**
      * Generate a small text PDF on the fly using Moodle's TCPDF wrapper.
      *
@@ -109,8 +110,10 @@ final class pdf_extractor_test extends \advanced_testcase {
         $blob = "%PDF-1.4\n" . str_repeat('A', pdf_extractor::MAX_FILESIZE_BYTES + 1024);
         $file = $this->as_stored_file($blob, 'huge.pdf');
 
-        $this->assertNull(pdf_extractor::extract_file($file),
-            'oversized PDF must short-circuit to null without parsing');
+        $this->assertNull(
+            pdf_extractor::extract_file($file),
+            'oversized PDF must short-circuit to null without parsing'
+        );
         // The extractor logs a debugging() message on the oversize path.
         $this->assertDebuggingCalled();
     }
@@ -152,8 +155,10 @@ final class pdf_extractor_test extends \advanced_testcase {
 
         $text = pdf_extractor::extract_file($file);
 
-        $this->assertNull($text,
-            'PDFs whose extracted text is below the usefulness threshold must return null');
+        $this->assertNull(
+            $text,
+            'PDFs whose extracted text is below the usefulness threshold must return null'
+        );
     }
 
     public function test_empty_bytes_returns_null(): void {

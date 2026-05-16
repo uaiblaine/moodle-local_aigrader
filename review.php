@@ -128,9 +128,15 @@ if ($action && data_submitted()) {
             'timepublished'  => $now,
         ]);
 
-        // 2. Upsert m_assign_grades. grader = the TEACHER (USER), never the system.
+        // 2. Hand the grade off to mod_assign via its public save_grade() API.
+        // The grader column is the TEACHER (USER), never a system id. The
+        // assign instance fires the standard submission_graded event,
+        // delegates feedback to enabled feedback plugins, and pushes the
+        // grade to the gradebook for us.
         local_aigrader_publish_grade(
-            assign: $assign,
+            course: $course,
+            cm: $cm,
+            context: $context,
             studentid: (int) $proposalrow->studentid,
             grade: (float) $finalgrade,
             feedbackhtml: local_aigrader_format_feedback_html(
@@ -455,101 +461,78 @@ function local_aigrader_format_feedback_html(array $strengths, array $improvemen
 }
 
 /**
- * Write the approved grade and feedback to m_assign_grades + assignfeedback_comments
- * (when comments plugin is enabled) + push to the Moodle gradebook.
+ * Publish the approved grade and feedback through mod_assign's public
+ * save_grade() API.
  *
- * The grader column is always the teacher's USER->id, never a system id.
- * The feedback is also written to m_grade_grades.feedback via grade_update()
- * so it shows in the gradebook even when the assignfeedback_comments plugin
- * is not enabled on the assignment.
+ * Replaces the previous direct DML on {assign_grades} +
+ * {assignfeedback_comments} + grade_update() with a single
+ * \assign::save_grade($studentid, $data) call. The benefit:
+ *
+ *   - {assign_grades} row written with grader = USER->id, timemodified,
+ *     etc., consistent with how the standard grading UI does it.
+ *   - The submission_graded event fires, so completion tracking,
+ *     notifications, and other Moodle observers react correctly.
+ *   - Feedback is dispatched to whichever feedback plugins are enabled
+ *     on the assignment (typically assignfeedback_comments). Plugins
+ *     that are disabled silently ignore our $data.
+ *   - The grade is pushed to the gradebook via the standard path —
+ *     no separate grade_update() call needed.
+ *
+ * Returns the {assign_grades}.id of the row that was created or updated,
+ * for downstream audit logging.
+ *
+ * @param \stdClass $course Course record.
+ * @param \stdClass $cm Course module record (cm_info or stdClass both work).
+ * @param \context_module $context Module context.
+ * @param int $studentid Id of the student being graded.
+ * @param float $grade Final grade on the assignment's scale (typically 0-10).
+ * @param string $feedbackhtml HTML feedback shown in the student's gradebook view.
+ * @return int Id of the {assign_grades} row.
  */
-function local_aigrader_publish_grade(\stdClass $assign, int $studentid, float $grade, string $feedbackhtml): int {
-    global $DB, $USER, $CFG;
-    require_once($CFG->libdir . '/gradelib.php');
+function local_aigrader_publish_grade(
+    \stdClass $course,
+    $cm,
+    \context_module $context,
+    int $studentid,
+    float $grade,
+    string $feedbackhtml
+): int {
+    global $DB, $CFG;
+    require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
-    $now = time();
+    $assigninstance = new \assign($context, $cm, $course);
 
-    // 1. Upsert m_assign_grades (mod_assign's own grade table; required so the
-    // teacher's grading screen reflects the grade).
-    $existing = $DB->get_record('assign_grades', [
-        'assignment'    => $assign->id,
-        'userid'        => $studentid,
-        'attemptnumber' => 0,
-    ]);
+    // Build the form-data shape that \assign::save_grade() expects.
+    $data = new \stdClass();
+    // -1 == "current attempt of the student". This is the same convention
+    // mod_assign's own grading UI passes in.
+    $data->attemptnumber = -1;
+    $data->grade         = $grade;
+    // The plugin manages its own student notifications. Don't double-notify.
+    $data->sendstudentnotifications = false;
 
-    $rec = (object) [
-        'assignment'    => $assign->id,
-        'userid'        => $studentid,
-        'attemptnumber' => 0,
-        'grade'         => $grade,
-        'grader'        => (int) $USER->id,
-        'timemodified'  => $now,
-    ];
-    if ($existing) {
-        $rec->id = $existing->id;
-        $DB->update_record('assign_grades', $rec);
-        $gradeid = (int) $existing->id;
-    } else {
-        $rec->timecreated = $now;
-        $gradeid = (int) $DB->insert_record('assign_grades', $rec);
-    }
-
-    // 2. Upsert assignfeedback_comments — only useful if the comments plugin.
-    // Is enabled on the assignment. NOTE: 'value' is a TEXT column so we.
-    // cannot use it in the WHERE clause (Moodle DML refuses); read the
-    // Value and compare in PHP.
-    $cfgvalue = $DB->get_field('assign_plugin_config', 'value', [
-        'assignment' => $assign->id,
-        'subtype'    => 'assignfeedback',
-        'plugin'     => 'comments',
-        'name'       => 'enabled',
-    ], IGNORE_MISSING);
-    if ((string) $cfgvalue === '1') {
-        $existingcomment = $DB->get_record('assignfeedback_comments', ['grade' => $gradeid]);
-        $cmt = (object) [
-            'assignment'    => $assign->id,
-            'grade'         => $gradeid,
-            'commenttext'   => $feedbackhtml,
-            'commentformat' => FORMAT_HTML,
+    // Attach the feedback if the comments feedback plugin is enabled on
+    // this assignment. If it isn't, save_grade() ignores the field and
+    // the feedback still appears in the gradebook via the grade item.
+    $commentsplugin = $assigninstance->get_feedback_plugin_by_type('comments');
+    if ($commentsplugin && $commentsplugin->is_enabled() && $commentsplugin->is_visible()) {
+        $data->assignfeedbackcomments_editor = [
+            'text'   => $feedbackhtml,
+            'format' => FORMAT_HTML,
         ];
-        if ($existingcomment) {
-            $cmt->id = $existingcomment->id;
-            $DB->update_record('assignfeedback_comments', $cmt);
-        } else {
-            $DB->insert_record('assignfeedback_comments', $cmt);
-        }
     }
 
-    // 3. Push to the Moodle gradebook via gradelib. This creates the grade_item.
-    // If missing AND inserts the grade in m_grade_grades with feedback.
-    // Crucially, it works regardless of which feedback plugins are enabled.
-    $gradeobj                  = new \stdClass();
-    $gradeobj->userid          = $studentid;
-    $gradeobj->rawgrade        = $grade;
-    $gradeobj->feedback        = $feedbackhtml;
-    $gradeobj->feedbackformat  = FORMAT_HTML;
-    $gradeobj->usermodified    = (int) $USER->id;
-    $gradeobj->dategraded      = $now;
+    $assigninstance->save_grade($studentid, $data);
 
-    $itemdetails = [
-        'itemname'  => $assign->name,
-        'gradetype' => GRADE_TYPE_VALUE,
-        'grademin'  => 0,
-        'grademax'  => $assign->grade > 0 ? $assign->grade : 100,
-    ];
-
-    grade_update(
-        'mod/assign',
-        (int) $assign->course,
-        'mod',
-        'assign',
-        (int) $assign->id,
-        0,
-        $gradeobj,
-        $itemdetails
+    // Re-read the freshly written {assign_grades} row id for the caller's
+    // audit log. assign::save_grade() does not return it directly.
+    $graderow = $DB->get_record(
+        'assign_grades',
+        ['assignment' => $assigninstance->get_instance()->id, 'userid' => $studentid],
+        'id, timemodified',
+        IGNORE_MULTIPLE  // Tolerate multiple attempts; we just need one id.
     );
-
-    return $gradeid;
+    return $graderow ? (int) $graderow->id : 0;
 }
 
 /**

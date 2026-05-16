@@ -38,7 +38,6 @@ namespace local_aigrader;
  * Stateless classifier. All public methods are static.
  */
 class error_classifier {
-
     /** Submission exceeded the model's context / TPM limit (HTTP 413, "Request too large"). */
     public const KIND_PAYLOAD_TOO_LARGE = 'payload_too_large';
 
@@ -77,32 +76,36 @@ class error_classifier {
 
         // --- Payload / token-limit errors ---------------------------------.
         // Examples we have seen:
-        //   "413: Request too large for model `llama-3.3-70b-versatile`
-        //    in organization `org_XXX` service tier `on_demand` on tokens
-        //    per minute (TPM): Limit 12000, Requested 14003, please ..."
-        //   "Request too large: context length exceeded"
-        //   "context_length_exceeded"
-        if (self::matches_any($trimmed, [
+        // "413: Request too large for model `llama-3.3-70b-versatile`
+        // in organization `org_XXX` service tier `on_demand` on tokens
+        // per minute (TPM): Limit 12000, Requested 14003, please ..."
+        // "Request too large: context length exceeded"
+        // "context_length_exceeded"
+        if (
+            self::matches_any($trimmed, [
             '/\b413\b/',
             '/request\s+too\s+large/i',
             '/context[_ ]length[_ ]exceeded/i',
             '/maximum\s+context\s+length/i',
             '/payload\s+too\s+large/i',
             '/tokens\s+per\s+minute/i',
-        ])) {
+            ])
+        ) {
             $params = self::extract_token_limit_info($trimmed);
             return new classified_error(self::KIND_PAYLOAD_TOO_LARGE, $raw, $params);
         }
 
         // --- Authentication / authorisation ------------------------------.
-        if (self::matches_any($trimmed, [
+        if (
+            self::matches_any($trimmed, [
             '/\b401\b/',
             '/\b403\b/',
             '/unauthori[sz]ed/i',
             '/invalid[_ ]api[_ ]key/i',
             '/api\s+key.*(invalid|expired|missing|revoked)/i',
             '/authentication.*fail/i',
-        ])) {
+            ])
+        ) {
             return new classified_error(self::KIND_UNAUTHORIZED, $raw, []);
         }
 
@@ -111,43 +114,51 @@ class error_classifier {
         // request itself exceeds the per-minute budget; that's already caught
         // above as PAYLOAD_TOO_LARGE because the corrective action is the
         // same (reduce size or switch model). Here we only handle pure 429.
-        if (self::matches_any($trimmed, [
+        if (
+            self::matches_any($trimmed, [
             '/\b429\b/',
             '/rate[_ ]limit/i',
             '/too\s+many\s+requests/i',
-        ])) {
+            ])
+        ) {
             return new classified_error(self::KIND_RATE_LIMITED, $raw, []);
         }
 
         // --- 5xx provider errors -----------------------------------------.
-        if (self::matches_any($trimmed, [
+        if (
+            self::matches_any($trimmed, [
             '/\b50[0-9]\b/',
             '/\b51[0-9]\b/',
             '/internal\s+server\s+error/i',
             '/service\s+unavailable/i',
             '/bad\s+gateway/i',
             '/gateway\s+timeout/i',
-        ])) {
+            ])
+        ) {
             return new classified_error(self::KIND_PROVIDER_ERROR, $raw, []);
         }
 
         // --- Network / transport errors ----------------------------------.
-        if (self::matches_any($trimmed, [
+        if (
+            self::matches_any($trimmed, [
             '/connection\s+(refused|reset|timed?\s*out)/i',
             '/curl\s+error/i',
             '/could\s+not\s+resolve/i',
             '/network\s+(error|failure|unreachable)/i',
             '/no\s+route\s+to\s+host/i',
             '/timeout/i',
-        ])) {
+            ])
+        ) {
             return new classified_error(self::KIND_NETWORK_ERROR, $raw, []);
         }
 
         // --- Parser failures ---------------------------------------------.
         // Persisted by manager as "parse_error: <details>".
-        if (stripos($trimmed, 'parse_error') !== false
+        if (
+            stripos($trimmed, 'parse_error') !== false
             || stripos($trimmed, 'malformed json') !== false
-            || stripos($trimmed, 'invalid json') !== false) {
+            || stripos($trimmed, 'invalid json') !== false
+        ) {
             return new classified_error(self::KIND_PARSE_ERROR, $raw, []);
         }
 

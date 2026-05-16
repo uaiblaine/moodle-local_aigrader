@@ -43,7 +43,6 @@ use moodle_url;
  * Stateless renderer (no Moodle renderer base class needed — we just emit HTML).
  */
 class error_banner {
-
     /**
      * Build the banner HTML for the manage page.
      *
@@ -104,8 +103,10 @@ class error_banner {
         // have a single body string.
         $bodykey = $sample->body_string_key();
         $body = '';
-        if ($kind === error_classifier::KIND_PAYLOAD_TOO_LARGE
-            && isset($sample->params['limit'], $sample->params['requested'], $sample->params['model'])) {
+        if (
+            $kind === error_classifier::KIND_PAYLOAD_TOO_LARGE
+            && isset($sample->params['limit'], $sample->params['requested'], $sample->params['model'])
+        ) {
             $body = get_string($bodykey, 'local_aigrader', (object) $sample->params);
         } else if ($kind === error_classifier::KIND_PAYLOAD_TOO_LARGE) {
             $body = get_string('err_payload_too_large_body_partial', 'local_aigrader');

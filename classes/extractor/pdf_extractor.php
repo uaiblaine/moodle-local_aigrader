@@ -45,7 +45,6 @@ namespace local_aigrader\extractor;
  * Class pdf_extractor.
  */
 class pdf_extractor {
-
     /**
      * Reject PDFs larger than this. Parsing a typical 11 MB PDF in the pilot
      * required PHP memory_limit = 1 GB, well above the 128–256 MB most Moodle

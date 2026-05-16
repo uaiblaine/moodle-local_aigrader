@@ -38,25 +38,41 @@ namespace local_aigrader;
  * Stateless reset helper.
  */
 class task_reset {
+    /** Outcome: an existing task was updated. */
+    public const RESULT_RESET = 'reset';
 
-    /**
-     * Outcome of a reset operation.
-     */
-    public const RESULT_RESET   = 'reset';   // An existing task was updated.
-    public const RESULT_LOCKED  = 'locked';  // Existing task is currently running; left alone.
-    public const RESULT_NEW     = 'new';     // No task existed; a fresh one was enqueued.
+    /** Outcome: an existing task is currently running; left alone. */
+    public const RESULT_LOCKED = 'locked';
+
+    /** Outcome: no task existed; a fresh one was enqueued. */
+    public const RESULT_NEW = 'new';
 
     /**
      * Reset the grade_submission adhoc task for a submission so the next
      * cron tick picks it up immediately. Idempotent: calling it twice in
      * a row is safe and leaves a single task row.
      *
-     * Why direct DML instead of \core\task\manager::reschedule_or_queue_
-     * adhoc_task(): on Moodle 4.5.11 we observed that API inserting a
-     * duplicate row rather than updating the existing one — even when
-     * the in-memory task object had its id set — leaving N+1 rows after
-     * each retry. Direct UPDATE on task_adhoc has no such risk and is
-     * a one-row write.
+     * Why direct DML on {task_adhoc} instead of the public task manager
+     * API: as of Moodle 4.5.11 the manager does NOT expose a way to clear
+     * faildelay / reset nextruntime on an existing adhoc task row.
+     *
+     *   - \core\task\manager::queue_adhoc_task() is insert-only (it always
+     *     creates a new task_adhoc row; there is no UPDATE branch even
+     *     when the in-memory task has its id set).
+     *   - \core\task\manager::reschedule_or_queue_adhoc_task() looks up an
+     *     existing match by classname + JSON-encoded customdata + userid
+     *     and re-uses its id when found. In practice on 4.5.11 we observed
+     *     it inserting a duplicate row on every retry; the customdata
+     *     JSON serialisation between the freshly built task object and
+     *     the previously stored row's customdata is not always byte-equal
+     *     when integers are cast through PARAM coercion, so the match
+     *     fails and the fallback insert wins.
+     *
+     * Until upstream provides a supported "rerun this adhoc task" call we
+     * have to write to task_adhoc directly. See the long-standing related
+     * issues in the Moodle Tracker (search "adhoc task reschedule API")
+     * for the upstream context. When that lands we replace this method
+     * with a one-liner and drop the direct DML.
      *
      * Tasks currently being executed (timestarted IS NOT NULL) are NOT
      * modified; the worker will finish on its own and either succeed

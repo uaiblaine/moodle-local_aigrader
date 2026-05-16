@@ -32,10 +32,11 @@
 namespace local_aigrader;
 
 /**
+ * Tests for the Retry-Now task-reset helper.
+ *
  * @covers \local_aigrader\task_reset
  */
 final class task_reset_test extends \advanced_testcase {
-
     /**
      * Counts the matching adhoc tasks in task_adhoc for a given submissionid.
      */
@@ -113,13 +114,19 @@ final class task_reset_test extends \advanced_testcase {
         $result = task_reset::reset_grading_task($submissionid, (int) $user->id);
 
         $this->assertSame(task_reset::RESULT_RESET, $result);
-        $this->assertSame(1, $this->count_tasks_for($submissionid),
-            'must not have created a duplicate task row');
+        $this->assertSame(
+            1,
+            $this->count_tasks_for($submissionid),
+            'must not have created a duplicate task row'
+        );
 
         $row = $this->get_task_record($submissionid);
         $this->assertEquals(0, $row->faildelay, 'faildelay should be cleared');
-        $this->assertLessThanOrEqual(time() + 1, (int) $row->nextruntime,
-            'nextruntime should be set to roughly now');
+        $this->assertLessThanOrEqual(
+            time() + 1,
+            (int) $row->nextruntime,
+            'nextruntime should be set to roughly now'
+        );
     }
 
     /**
@@ -137,8 +144,11 @@ final class task_reset_test extends \advanced_testcase {
         task_reset::reset_grading_task($submissionid, (int) $user->id);
         task_reset::reset_grading_task($submissionid, (int) $user->id);
 
-        $this->assertSame(1, $this->count_tasks_for($submissionid),
-            'three consecutive resets must leave exactly one row');
+        $this->assertSame(
+            1,
+            $this->count_tasks_for($submissionid),
+            'three consecutive resets must leave exactly one row'
+        );
     }
 
     /**
@@ -180,10 +190,16 @@ final class task_reset_test extends \advanced_testcase {
 
         $result = task_reset::reset_grading_task($submissionid, (int) $user->id);
 
-        $this->assertSame(task_reset::RESULT_LOCKED, $result,
-            'a running task must be reported as locked, not reset');
-        $this->assertSame(1, $this->count_tasks_for($submissionid),
-            'must not enqueue a second task while one is running');
+        $this->assertSame(
+            task_reset::RESULT_LOCKED,
+            $result,
+            'a running task must be reported as locked, not reset'
+        );
+        $this->assertSame(
+            1,
+            $this->count_tasks_for($submissionid),
+            'must not enqueue a second task while one is running'
+        );
     }
 
     /**
@@ -208,7 +224,10 @@ final class task_reset_test extends \advanced_testcase {
 
         // 99006 should still have faildelay=600 (untouched).
         $row6 = $this->get_task_record(99006);
-        $this->assertEquals($faildelaybefore, (int) $row6->faildelay,
-            'reset must not affect unrelated submissions');
+        $this->assertEquals(
+            $faildelaybefore,
+            (int) $row6->faildelay,
+            'reset must not affect unrelated submissions'
+        );
     }
 }

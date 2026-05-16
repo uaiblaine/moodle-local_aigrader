@@ -25,10 +25,11 @@
 namespace local_aigrader;
 
 /**
+ * Tests for the raw-LLM-error to classified-error mapping.
+ *
  * @covers \local_aigrader\error_classifier
  */
 final class error_classifier_test extends \advanced_testcase {
-
     /**
      * The real Groq 413 string that prompted this feature.
      */

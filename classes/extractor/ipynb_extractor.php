@@ -51,7 +51,6 @@ namespace local_aigrader\extractor;
  * Class ipynb_extractor.
  */
 class ipynb_extractor {
-
     /**
      * Maximum lines kept per individual cell output. If an output exceeds
      * this, we keep half from the head and half from the tail with a

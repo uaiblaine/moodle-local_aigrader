@@ -31,10 +31,11 @@
 namespace local_aigrader;
 
 /**
+ * Tests for the LLM-response JSON parser.
+ *
  * @covers \local_aigrader\output_parser
  */
 final class output_parser_test extends \advanced_testcase {
-
     /**
      * Build a realistic JSON response, parse it, and assert every field
      * round-trips correctly. The constructor-mismatch regression would fail

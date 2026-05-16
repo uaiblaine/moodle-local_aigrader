@@ -32,10 +32,11 @@
 namespace local_aigrader\extractor;
 
 /**
+ * Tests for the .ipynb extractor and its output-truncation behaviour.
+ *
  * @covers \local_aigrader\extractor\ipynb_extractor
  */
 final class ipynb_extractor_test extends \advanced_testcase {
-
     /**
      * Build a minimal valid notebook JSON given a list of cells.
      *
@@ -70,7 +71,10 @@ final class ipynb_extractor_test extends \advanced_testcase {
             for ($b = 1; $b <= $batchesperepoch; $b++) {
                 $lines[] = sprintf(
                     'Epoch %d/%d %d/%d [%s>] - loss: 0.%04d - accuracy: 0.%04d',
-                    $e, $epochs, $b, $batchesperepoch,
+                    $e,
+                    $epochs,
+                    $b,
+                    $batchesperepoch,
                     str_repeat('=', min(30, $b)),
                     (int) (1000 - ($e * 15 + $b * 0.001)),
                     (int) (800 + ($e * 4))

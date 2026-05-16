@@ -33,12 +33,13 @@
 namespace local_aigrader\extractor;
 
 /**
+ * Tests for the dispatcher's all-unsupported-formats decision branch.
+ *
  * @covers \local_aigrader\extractor\dispatcher::decide_outcome
  * @covers \local_aigrader\extractor\extraction_result::needs_review
  * @covers \local_aigrader\extractor\extraction_result::is_needs_review
  */
 final class dispatcher_outcome_test extends \advanced_testcase {
-
     /**
      * Empty submission (no files of any kind) → error, never needs_review.
      */
@@ -70,10 +71,16 @@ final class dispatcher_outcome_test extends \advanced_testcase {
 
         $this->assertTrue($out->is_needs_review(), 'PDF-only submission must be flagged for manual review');
         $this->assertFalse($out->is_ok(), 'PDF-only must not look like a normal extraction');
-        $this->assertStringContainsString('unparseable', $out->error,
-            'message must clearly flag unparseable input');
-        $this->assertStringContainsString('research.pdf', $out->error,
-            'reason text must surface the offending file name');
+        $this->assertStringContainsString(
+            'unparseable',
+            $out->error,
+            'message must clearly flag unparseable input'
+        );
+        $this->assertStringContainsString(
+            'research.pdf',
+            $out->error,
+            'reason text must surface the offending file name'
+        );
         $this->assertContains('research.pdf unsupported: pdf', $out->warnings);
     }
 
@@ -127,10 +134,16 @@ final class dispatcher_outcome_test extends \advanced_testcase {
 
         $this->assertTrue($out->is_ok(), 'should still grade with the notebook content');
         $this->assertFalse($out->is_needs_review());
-        $this->assertSame(extraction_result::FORMAT_MIXED, $out->format,
-            'multi-format submission should report FORMAT_MIXED');
-        $this->assertContains('ref.pdf unsupported: pdf', $out->warnings,
-            'skipped file must still be visible in the warnings list');
+        $this->assertSame(
+            extraction_result::FORMAT_MIXED,
+            $out->format,
+            'multi-format submission should report FORMAT_MIXED'
+        );
+        $this->assertContains(
+            'ref.pdf unsupported: pdf',
+            $out->warnings,
+            'skipped file must still be visible in the warnings list'
+        );
     }
 
     /**

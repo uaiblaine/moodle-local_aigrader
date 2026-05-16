@@ -31,7 +31,6 @@ namespace local_aigrader;
  * Result of classifying an error message.
  */
 class classified_error {
-
     /** @var string One of error_classifier::KIND_* constants. */
     public string $kind;
 
