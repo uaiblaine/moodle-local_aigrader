@@ -72,8 +72,7 @@ $string['error_criteria_required'] = 'Los criterios de evaluación son obligator
 // Importador de rúbricas.
 $string['rubric_export_header'] = 'Criterios (auto-importados de la rúbrica de calificación avanzada de la tarea):';
 
-// Privacidad.
-$string['privacy:metadata'] = 'AI Grader Pro almacena registros de auditoría de las acciones de calificación asistida por IA, incluyendo prompts enviados al proveedor LLM configurado, respuestas del modelo, notas propuestas y ediciones del profesor. Consulta la documentación del plugin para más detalles.';
+// (privacy:metadata definido en el bloque "Strings del Privacy provider" más abajo.)
 
 // Tareas adhoc (vistas en Administración del sitio > Servidor > Tareas).
 $string['task_grade_submission'] = 'AI Grader Pro: calificar una entrega';
@@ -119,37 +118,6 @@ $string['review_proposed_at']     = 'Propuesta hecha el {$a}';
 $string['review_proposed_by']     = 'por {$a->provider} ({$a->model})';
 $string['review_submission_files']        = 'Ficheros adjuntos';
 $string['review_submission_seen_by_ai']   = 'Entrega tal y como la vio la IA';
-
-$string['field_finalgrade']         = 'Nota final (0-10)';
-$string['field_strengths']          = 'Aciertos';
-$string['field_strengths_hint']     = 'Uno por linea. Se mostrara al alumno como feedback positivo.';
-$string['field_improvements']       = 'Mejorables';
-$string['field_improvements_hint']  = 'Uno por linea. Sugerencias constructivas que vera el alumno.';
-$string['field_justification']      = 'Justificacion (visible para el alumno)';
-
-$string['btn_review']         = 'Revisar →';
-$string['btn_view_published'] = 'Ver ✓';
-$string['confirm_reject']     = 'Esto descarta la propuesta IA y tendras que calificar manualmente. Continuar?';
-
-$string['msg_published']      = 'Nota aprobada y publicada en el libro de calificaciones.';
-$string['msg_rejected']       = 'Propuesta IA rechazada. Califica manualmente usando la pantalla estandar de la tarea.';
-
-$string['feedback_strengths']    = 'Aciertos';
-$string['feedback_improvements'] = 'A mejorar';
-$string['feedback_justification'] = 'Resumen';
-
-$string['errornoproposal']      = 'No hay propuesta IA disponible para esta entrega.';
-$string['errorparseproposal']   = 'La propuesta IA guardada no se ha podido leer. Recalifica para regenerarla.';
-$string['errorgradeoutofrange'] = 'La nota debe estar entre 0 y 10 (recibido: {$a}).';
-
-// Pagina de revision (/local/aigrader/review.php).
-$string['review_pagetitle']       = 'Revisar propuesta IA · {$a}';
-$string['review_heading']         = 'Revisar propuesta IA: {$a->assign} — {$a->student}';
-$string['review_submission_text'] = 'Entrega del alumno';
-$string['review_proposed']        = 'Nota y feedback propuestos (editables)';
-$string['review_criterion_scores'] = 'Puntuacion por criterio (de la IA, informativa)';
-$string['review_proposed_at']     = 'Propuesta hecha el {$a}';
-$string['review_proposed_by']     = 'por {$a->provider} ({$a->model})';
 
 $string['field_finalgrade']         = 'Nota final (0-10)';
 $string['field_strengths']          = 'Aciertos';
