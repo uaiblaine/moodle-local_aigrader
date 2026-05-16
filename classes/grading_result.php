@@ -80,12 +80,16 @@ class grading_result {
         $this->submissionid = $submissionid;
     }
 
+    /** @var bool True when the submission was short-circuited as needing manual review. */
+    public bool $needs_review = false;
+
     /**
      * Mark the run as successful.
      */
     public function mark_success(): void {
-        $this->success = true;
-        $this->error   = null;
+        $this->success      = true;
+        $this->error        = null;
+        $this->needs_review = false;
     }
 
     /**
@@ -94,7 +98,21 @@ class grading_result {
      * @param string $message Human-readable error message.
      */
     public function mark_error(string $message): void {
-        $this->success = false;
-        $this->error   = $message;
+        $this->success      = false;
+        $this->error        = $message;
+        $this->needs_review = false;
+    }
+
+    /**
+     * Mark the run as needing manual teacher review (e.g. the submission only
+     * contained files in unsupported formats so we did not call the LLM).
+     * Counts as "not success" — callers should not expect $proposal to be set.
+     *
+     * @param string $message Human-readable reason shown to the teacher.
+     */
+    public function mark_needs_review(string $message): void {
+        $this->success      = false;
+        $this->error        = $message;
+        $this->needs_review = true;
     }
 }

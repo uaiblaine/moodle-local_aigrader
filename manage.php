@@ -289,7 +289,13 @@ function local_aigrader_render_status(?string $status, ?string $errormsg): strin
             }
             return $badge;
         case 'unsupported_format':
-            return html_writer::span(get_string('status_unsupported', 'local_aigrader'), 'badge bg-warning');
+            $badge = html_writer::span(get_string('status_unsupported', 'local_aigrader'), 'badge bg-warning text-dark');
+            if ($errormsg) {
+                // The dispatcher's needs_review() reason already states which
+                // files were skipped and what formats we accept. Show it.
+                $badge .= ' ' . html_writer::span(s($errormsg), 'small text-muted');
+            }
+            return $badge;
         default:
             return html_writer::span(s($status), 'badge bg-secondary');
     }

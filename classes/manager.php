@@ -48,6 +48,22 @@ class manager {
         $submrecid = null;
 
         try {
+            // 0. Pre-flight: short-circuit submissions where every uploaded
+            // file is in an unsupported format (e.g. only a .pdf). Sending
+            // those to the LLM produced false 0/10 grades in the v1.0.1
+            // pilot — Suárez's research-grade PDF project was rated 0 even
+            // though the actual work was excellent. The dispatcher flags
+            // these via is_needs_review(); we route them straight to a
+            // manual-review status without burning any tokens.
+            $preflight = \local_aigrader\extractor\dispatcher::extract($submissionid);
+            if ($preflight->is_needs_review()) {
+                $submrecid = self::mark_submission_needs_review($submissionid, (string) $preflight->error);
+                $result->submission_record_id = $submrecid;
+                $result->duration_ms = (int) round((microtime(true) - $start) * 1000);
+                $result->mark_needs_review((string) $preflight->error);
+                return $result;
+            }
+
             // 1. Build prompt (throws if config missing or extraction fails).
             $prompt = builder::build_for_submission($submissionid);
             $result->prompt_hash = $prompt->hash();
@@ -196,6 +212,52 @@ class manager {
             'timeprocessed' => time(),
             'timemodified'  => time(),
         ]);
+    }
+
+    /**
+     * Upsert a local_aigrader_submission row and tag it as needing manual
+     * teacher review (status = 'unsupported_format'). Used when the
+     * preflight extraction detects an entirely unprocessable submission
+     * (e.g. only .pdf attachments) so the teacher can grade it by hand
+     * without an AI proposal being generated.
+     *
+     * Returns the row id so the caller can store it on the grading_result
+     * for downstream logging.
+     *
+     * @param int $submissionid The assign_submission.id
+     * @param string $reason Human-readable explanation shown in the table.
+     * @return int Local submission row id.
+     */
+    private static function mark_submission_needs_review(int $submissionid, string $reason): int {
+        global $DB;
+
+        $assignsub = $DB->get_record('assign_submission', ['id' => $submissionid]);
+        $now       = time();
+        $existing  = $DB->get_record('local_aigrader_submission', ['submissionid' => $submissionid]);
+
+        $rec = (object) [
+            'submissionid'      => $submissionid,
+            'assignid'          => (int) ($assignsub->assignment ?? 0),
+            'courseid'          => (int) (get_course_and_cm_from_instance($assignsub->assignment, 'assign')[0]->id ?? 0),
+            'studentid'         => (int) ($assignsub->userid ?? 0),
+            'status'            => 'unsupported_format',
+            'error_message'     => $reason,
+            // Null out any stale proposal fields from a previous run on the
+            // same row — otherwise the table keeps showing the old grade
+            // alongside the new orange "unsupported" badge.
+            'proposed_grade'    => null,
+            'proposed_feedback' => null,
+            'timeprocessed'     => $now,
+            'timemodified'      => $now,
+        ];
+
+        if ($existing) {
+            $rec->id = $existing->id;
+            $DB->update_record('local_aigrader_submission', $rec);
+            return (int) $existing->id;
+        }
+        $rec->timecreated = $now;
+        return (int) $DB->insert_record('local_aigrader_submission', $rec);
     }
 
     /**

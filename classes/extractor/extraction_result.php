@@ -77,6 +77,15 @@ class extraction_result {
     public ?string $error;
 
     /**
+     * @var bool True when the extraction could not produce anything usable
+     *           because every uploaded file was in an unsupported format
+     *           (e.g. only a .pdf). The submission should be flagged for
+     *           manual teacher review instead of being sent to the LLM.
+     *           Distinct from $error: it's not a bug, just a known limitation.
+     */
+    public bool $needs_review = false; // phpcs:ignore moodle.NamingConventions.ValidVariableName.MemberNameUnderscore
+
+    /**
      * Private constructor: use ::success() or ::error().
      *
      * @param string $text Extracted text.
@@ -131,11 +140,40 @@ class extraction_result {
     }
 
     /**
+     * Build a "needs manual review" result. Used by the dispatcher when every
+     * top-level uploaded file is in an unsupported format (e.g. a submission
+     * containing only a .pdf when the plugin currently supports .txt / .md /
+     * .docx / .ipynb / .zip / code files). The reason text is shown to the
+     * teacher; the warnings list is the per-file diagnostic ("foo.pdf: pdf
+     * format not supported").
+     *
+     * Callers should NOT pass this result on to the LLM — instead, set the
+     * submission's status to 'unsupported_format' and surface the reason in
+     * the manage page banner.
+     *
+     * @param string $reason Single-line summary visible to the teacher.
+     * @param string[] $warnings Per-file diagnostic messages.
+     * @return extraction_result
+     */
+    public static function needs_review(string $reason, array $warnings = []): self {
+        $r = new self('', self::FORMAT_UNSUPPORTED, $warnings, false, $reason);
+        $r->needs_review = true;
+        return $r;
+    }
+
+    /**
      * Whether the result is usable for grading.
      *
      * @return bool True if no error AND there is text to grade.
      */
     public function is_ok(): bool {
         return $this->error === null && $this->text !== '';
+    }
+
+    /**
+     * Whether the result represents a submission flagged for manual review.
+     */
+    public function is_needs_review(): bool {
+        return $this->needs_review;
     }
 }

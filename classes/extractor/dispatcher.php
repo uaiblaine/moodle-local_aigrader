@@ -112,14 +112,55 @@ class dispatcher implements extractor_interface {
             }
         }
 
+        return self::decide_outcome($submissionid, $parts, $warnings, $formats);
+    }
+
+    /**
+     * Combine the per-file results into the final extraction_result.
+     *
+     * Extracted as a pure static helper so unit tests can exercise the
+     * "all-unsupported → needs_review" logic without standing up real
+     * Moodle file storage fixtures.
+     *
+     * @param int $submissionid The submission this extraction is for (used in error messages).
+     * @param string[] $parts Text fragments collected from each file/source.
+     * @param string[] $warnings Per-file warnings (truncations, skipped files, ...).
+     * @param string[] $formats Per-entry format identifiers (FORMAT_* constants).
+     * @return extraction_result
+     */
+    public static function decide_outcome(int $submissionid, array $parts, array $warnings, array $formats): extraction_result {
         if (empty($parts)) {
             return extraction_result::error('No supported content found in submission id=' . $submissionid);
         }
 
+        // Detect the "submission is entirely unsupported formats" case. The
+        // motivating example: a student submits only a .pdf. dispatch_file()
+        // returns an "unsupported" placeholder for each such file, so $parts
+        // is non-empty but every entry has FORMAT_UNSUPPORTED. Sending that
+        // placeholder text to the LLM gets us a 0/10 grade on what may be
+        // legitimate work in a format the plugin can't read — we saw exactly
+        // that with a PDF-only research-grade submission in the v1.0.1 pilot.
+        //
+        // The rule: if EVERY format we got back is FORMAT_UNSUPPORTED, do not
+        // grade. Mark the submission for manual teacher review instead. If
+        // even one file was processable, we proceed with grading and let the
+        // existing warnings system flag the skipped files as side notes.
+        $uniqueformats = array_values(array_unique($formats));
+        if ($uniqueformats === [extraction_result::FORMAT_UNSUPPORTED]) {
+            $skipped = array_values(array_filter(
+                $warnings,
+                fn($w) => stripos($w, 'unsupported') !== false
+            ));
+            return extraction_result::needs_review(
+                'All submitted files are in unsupported formats. '
+                . 'Supported: .txt, .md, .docx, .ipynb, .zip, code files. '
+                . 'Skipped: ' . implode('; ', $skipped),
+                $skipped
+            );
+        }
+
         $combined = trim(implode("\n", $parts));
 
-        // Determine the aggregate format identifier we report upstream.
-        $uniqueformats = array_values(array_unique($formats));
         if (count($uniqueformats) === 1) {
             $format = $uniqueformats[0];
         } else {
