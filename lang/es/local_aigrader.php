@@ -117,6 +117,8 @@ $string['review_proposed']        = 'Nota y feedback propuestos (editables)';
 $string['review_criterion_scores'] = 'Puntuacion por criterio (de la IA, informativa)';
 $string['review_proposed_at']     = 'Propuesta hecha el {$a}';
 $string['review_proposed_by']     = 'por {$a->provider} ({$a->model})';
+$string['review_submission_files']        = 'Ficheros adjuntos';
+$string['review_submission_seen_by_ai']   = 'Entrega tal y como la vio la IA';
 
 $string['field_finalgrade']         = 'Nota final (0-10)';
 $string['field_strengths']          = 'Aciertos';

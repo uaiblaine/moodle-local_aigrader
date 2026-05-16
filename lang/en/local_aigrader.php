@@ -148,6 +148,8 @@ $string['review_proposed']        = 'Proposed grade and feedback (editable)';
 $string['review_criterion_scores'] = 'Criterion scores (from AI, for context)';
 $string['review_proposed_at']     = 'Proposed at {$a}';
 $string['review_proposed_by']     = 'by {$a->provider} ({$a->model})';
+$string['review_submission_files']        = 'Attached files';
+$string['review_submission_seen_by_ai']   = 'Submission as seen by the AI';
 
 $string['field_finalgrade']         = 'Final grade (0-10)';
 $string['field_strengths']          = 'Strengths';

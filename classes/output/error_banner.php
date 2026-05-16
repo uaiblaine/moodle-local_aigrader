@@ -139,18 +139,10 @@ class error_banner {
         }
 
         // Optional collapsible "raw error" for the curious / for support.
-        $rawid = 'aigrader-raw-' . uniqid();
-        $rawblock = html_writer::tag('button',
-            get_string('err_banner_show_details', 'local_aigrader'),
-            [
-                'type' => 'button',
-                'class' => 'btn btn-link btn-sm p-0',
-                'data-bs-toggle' => 'collapse',
-                'data-bs-target' => '#' . $rawid,
-                'aria-expanded' => 'false',
-                'aria-controls' => $rawid,
-            ]
-        );
+        // Use native <details>/<summary> rather than Bootstrap's data-toggle
+        // collapse: this page (manage.php) uses the 'incourse' layout which
+        // does not auto-load Bootstrap collapse JS on Moodle 4.5, and
+        // <details> works in every modern browser without JS.
         $rawcontent = '';
         foreach ($entries as $entry) {
             $rawcontent .= html_writer::tag(
@@ -159,7 +151,14 @@ class error_banner {
                 ['class' => 'small text-muted mb-1']
             );
         }
-        $rawblock .= html_writer::div($rawcontent, 'collapse mt-2', ['id' => $rawid]);
+        $rawblock = html_writer::tag(
+            'details',
+            html_writer::tag(
+                'summary',
+                get_string('err_banner_show_details', 'local_aigrader'),
+                ['style' => 'cursor: pointer; user-select: none;']
+            ) . html_writer::div($rawcontent, 'mt-2')
+        );
 
         // Alert level: warning for transient (will recover), danger for
         // teacher-action-required.

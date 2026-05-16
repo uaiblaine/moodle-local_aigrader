@@ -182,20 +182,105 @@ echo $OUTPUT->heading(get_string('review_heading', 'local_aigrader', [
     'student' => fullname($student),
 ]));
 
-// Submission text (read-only).
-$extraction = \local_aigrader\extractor\text_extractor::extract($submissionid);
+// ---------------------------------------------------------------------.
+// Student submission (read-only): list of attached files + extracted text
+// the AI actually saw. The earlier text_extractor-only path reported
+// "Online text submission is empty" whenever the student attached a file
+// instead of typing online text, hiding the .ipynb / .docx / .zip that
+// was actually graded. Using the dispatcher here shows the teacher the
+// same text the LLM consumed, which is required to fairly review the
+// proposal — especially now that ipynb_extractor head+tail-truncates
+// long training logs.
+// ---------------------------------------------------------------------.
 echo html_writer::tag('h3', get_string('review_submission_text', 'local_aigrader'));
+
+// File attachments list. Built from the standard mod_assign file area so
+// it works regardless of which submission plugin (file / onlinetext /
+// both) the assignment is configured with.
+$fs    = get_file_storage();
+$files = $fs->get_area_files(
+    $context->id,
+    'assignsubmission_file',
+    'submission_files',
+    $submissionid,
+    'filename',
+    false // Skip directory entries.
+);
+
+if ($files) {
+    echo html_writer::start_div('card mb-3');
+    echo html_writer::start_div('card-body');
+    echo html_writer::tag(
+        'h6',
+        get_string('review_submission_files', 'local_aigrader'),
+        ['class' => 'card-subtitle text-muted mb-2']
+    );
+    echo html_writer::start_tag('ul', ['class' => 'list-unstyled mb-0']);
+    foreach ($files as $file) {
+        $downloadurl = \moodle_url::make_pluginfile_url(
+            $file->get_contextid(),
+            $file->get_component(),
+            $file->get_filearea(),
+            $file->get_itemid(),
+            $file->get_filepath(),
+            $file->get_filename(),
+            true // Force download.
+        );
+        $sizekb = round($file->get_filesize() / 1024, 1);
+        echo html_writer::tag(
+            'li',
+            html_writer::link(
+                $downloadurl,
+                s($file->get_filename()),
+                ['class' => 'me-2']
+            )
+            . html_writer::span("({$sizekb} KB)", 'text-muted small'),
+            ['class' => 'mb-1']
+        );
+    }
+    echo html_writer::end_tag('ul');
+    echo html_writer::end_div();
+    echo html_writer::end_div();
+}
+
+// Plain-text view as the AI saw it. Uses dispatcher::extract (the same
+// extractor the grading manager uses to build the LLM prompt), so this
+// box reproduces exactly what was sent — including ipynb head+tail
+// truncation. Uses native <details>/<summary> for the toggle so it
+// works without depending on Bootstrap collapse JS (which is loaded
+// selectively by Moodle 4.5 via AMD and is not active on this page).
+$extraction = \local_aigrader\extractor\dispatcher::extract($submissionid);
+
 echo html_writer::start_div('card mb-4');
 echo html_writer::start_div('card-body');
+echo html_writer::start_tag('details');
+echo html_writer::tag(
+    'summary',
+    html_writer::span(
+        get_string('review_submission_seen_by_ai', 'local_aigrader'),
+        'fw-semibold'
+    ),
+    ['style' => 'cursor: pointer; user-select: none;']
+);
+echo html_writer::start_div('mt-2');
 if ($extraction->is_ok()) {
     echo html_writer::tag(
         'pre',
         s($extraction->text),
-        ['style' => 'white-space: pre-wrap; max-height: 300px; overflow-y: auto; font-family: inherit;']
+        ['style' => 'white-space: pre-wrap; max-height: 400px; overflow-y: auto; '
+                  . 'font-family: monospace; font-size: 0.85rem; '
+                  . 'background: #f6f8fa; padding: 0.75rem; border-radius: 4px;']
     );
+    if (!empty($extraction->warnings)) {
+        foreach ($extraction->warnings as $w) {
+            echo html_writer::div(s($w), 'small text-muted mt-1');
+        }
+    }
 } else {
     echo html_writer::div(s($extraction->error ?? '(no text)'), 'text-muted');
 }
+echo html_writer::end_div();
+echo html_writer::end_tag('details');
 echo html_writer::end_div();
 echo html_writer::end_div();
 
