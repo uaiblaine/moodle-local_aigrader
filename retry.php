@@ -71,14 +71,34 @@ if ($existing) {
     ]);
 }
 
-// 2. Reset the grading task (or enqueue a fresh one). The dedupe and
-// concurrent-worker handling live in \local_aigrader\task_reset so a
-// unit test can exercise them without spinning up this endpoint.
-\local_aigrader\task_reset::reset_grading_task($submissionid, (int) $USER->id);
+// 2. Grade synchronously. The teacher just hit "Retry now" and is
+// actively watching the screen; running the LLM call right here gives
+// a 2-5 s response instead of "queued, wait for next cron tick".
+// task_reset is still used as a fallback (and as a documented entry
+// point for future auto-retry flows), but the demo path is direct.
+\core\session\manager::write_close();
+@set_time_limit(120);
 
-redirect(
-    $redirecturl,
-    get_string('msg_enqueued', 'local_aigrader'),
+$mgr    = new \local_aigrader\manager();
+$result = $mgr->grade_submission($submissionid);
+
+if ($result->success) {
+    redirect($redirecturl,
+        get_string('msg_graded_now', 'local_aigrader'),
+        null,
+        \core\output\notification::NOTIFY_SUCCESS
+    );
+}
+if (!empty($result->needs_review)) {
+    redirect($redirecturl,
+        get_string('msg_needs_manual_review', 'local_aigrader'),
+        null,
+        \core\output\notification::NOTIFY_WARNING
+    );
+}
+$classified = \local_aigrader\error_classifier::classify((string) $result->error);
+redirect($redirecturl,
+    get_string($classified->headline_string_key(), 'local_aigrader'),
     null,
-    \core\output\notification::NOTIFY_SUCCESS
+    \core\output\notification::NOTIFY_ERROR
 );

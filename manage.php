@@ -87,17 +87,47 @@ if ($action === 'enqueue' && data_submitted()) {
         ]);
     }
 
-    // Enqueue.
-    $task = new \local_aigrader\task\grade_submission();
-    $task->set_custom_data((object) ['submissionid' => (int) $submissionid]);
-    $task->set_userid((int) $USER->id);
-    \core\task\manager::queue_adhoc_task($task);
+    // Grade synchronously in this request. The teacher just clicked the
+    // button and is actively waiting; making the LLM call right here
+    // gives a 2-5 s response time instead of "queued, come back after
+    // the next cron tick" — see the v1.0.4 pilot feedback ("estaría
+    // esperando un minuto delante de los clientes"). The async adhoc
+    // task class is still kept around for future auto-grading flows
+    // triggered by student submission events, which DO need the cron
+    // pattern so they don't block the student's submit request.
+    \core\session\manager::write_close(); // Release the session lock during the LLM call.
+    @set_time_limit(120);
 
+    $mgr    = new \local_aigrader\manager();
+    $result = $mgr->grade_submission((int) $submissionid);
+
+    if ($result->success) {
+        redirect(
+            new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]),
+            get_string('msg_graded_now', 'local_aigrader'),
+            null,
+            \core\output\notification::NOTIFY_SUCCESS
+        );
+    }
+
+    if (!empty($result->needs_review)) {
+        redirect(
+            new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]),
+            get_string('msg_needs_manual_review', 'local_aigrader'),
+            null,
+            \core\output\notification::NOTIFY_WARNING
+        );
+    }
+
+    // Generic LLM failure (rate limit, payload, auth, parse…). The
+    // detailed banner on the manage table already classifies and shows
+    // the cause; here we just surface a short headline in the toast.
+    $classified = \local_aigrader\error_classifier::classify((string) $result->error);
     redirect(
         new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]),
-        get_string('msg_enqueued', 'local_aigrader'),
+        get_string($classified->headline_string_key(), 'local_aigrader'),
         null,
-        \core\output\notification::NOTIFY_SUCCESS
+        \core\output\notification::NOTIFY_ERROR
     );
 }
 
