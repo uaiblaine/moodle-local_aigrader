@@ -71,31 +71,10 @@ if ($existing) {
     ]);
 }
 
-// 2. Look for an existing adhoc task and reset its backoff. We match by
-// classname AND by submissionid in customdata.
-// `core\task\manager::get_adhoc_tasks()` returns instances filtered by class.
-$existingtasks = \core\task\manager::get_adhoc_tasks(\local_aigrader\task\grade_submission::class);
-$resetone = false;
-foreach ($existingtasks as $task) {
-    $data = $task->get_custom_data();
-    if (is_object($data) && (int) ($data->submissionid ?? 0) === $submissionid) {
-        // Reset backoff so the next cron tick picks it up. The setters exist
-        // on adhoc_task and the changes are persisted via reschedule_or_queue.
-        $task->set_fail_delay(0);
-        $task->set_next_run_time($now);
-        \core\task\manager::reschedule_or_queue_adhoc_task($task);
-        $resetone = true;
-        break; // There should never be more than one per submissionid.
-    }
-}
-
-// 3. If nothing matched, enqueue a brand new task.
-if (!$resetone) {
-    $task = new \local_aigrader\task\grade_submission();
-    $task->set_custom_data((object) ['submissionid' => $submissionid]);
-    $task->set_userid((int) $USER->id);
-    \core\task\manager::queue_adhoc_task($task);
-}
+// 2. Reset the grading task (or enqueue a fresh one). The dedupe and
+// concurrent-worker handling live in \local_aigrader\task_reset so a
+// unit test can exercise them without spinning up this endpoint.
+\local_aigrader\task_reset::reset_grading_task($submissionid, (int) $USER->id);
 
 redirect(
     $redirecturl,
