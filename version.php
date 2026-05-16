@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051601;           // YYYYMMDDXX. v1.0.2: locale-safe grade input, needs_review for unprocessable submissions.
+$plugin->version   = 2026051602;           // YYYYMMDDXX. v1.0.3: PDF support via vendored smalot/pdfparser.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.2-beta';
+$plugin->release   = 'v1.0.3-beta';
