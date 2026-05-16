@@ -308,7 +308,12 @@ echo html_writer::empty_tag('input', [
     'type'  => 'number',
     'name'  => 'finalgrade',
     'id'    => 'finalgrade',
-    'value' => format_float((float) $currentgrade, 2),
+    // Use number_format with explicit "." decimal, NOT format_float:
+    // format_float respects the user's locale (comma in es/fr/de/...) but
+    // HTML <input type="number"> only accepts ASCII dot. With a comma the
+    // browser refuses the value and leaves the field empty, hiding the AI
+    // proposal from the teacher.
+    'value' => number_format((float) $currentgrade, 2, '.', ''),
     'min'   => 0,
     'max'   => 10,
     'step'  => 0.1,
