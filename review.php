@@ -331,11 +331,26 @@ echo html_writer::end_div();
 echo html_writer::end_div();
 
 // Criterion scores summary (read-only, info only).
+//
+// The slugs come from the LLM's structured JSON output. We instruct the
+// model to emit machine-readable identifiers (snake_case, ASCII only)
+// so the PHP parser doesn't trip on accents or whitespace. That's good
+// for the parser but ugly for the teacher, who otherwise sees lines
+// like "configuracion_y_justificacion_explicita_de_hiperparametros".
+// Convert snake_case -> "First word capitalised, rest lowercase, with
+// spaces". Accents are lost in this transform (the underlying slug has
+// none), which is an acceptable trade-off — full pretty labels would
+// require either a per-criterion dictionary or a separate "label" field
+// from the LLM, both of which complicate the prompt for marginal gain.
 if (!empty($proposed['criterion_scores']) && is_array($proposed['criterion_scores'])) {
     echo html_writer::tag('h3', get_string('review_criterion_scores', 'local_aigrader'));
     echo html_writer::start_tag('ul');
     foreach ($proposed['criterion_scores'] as $slug => $score) {
-        echo html_writer::tag('li', s($slug) . ': <strong>' . format_float((float) $score, 2) . '</strong> / 10');
+        $label = local_aigrader_humanize_criterion_slug((string) $slug);
+        echo html_writer::tag(
+            'li',
+            s($label) . ': <strong>' . format_float((float) $score, 2) . '</strong> / 10'
+        );
     }
     echo html_writer::end_tag('ul');
 }
@@ -475,6 +490,24 @@ function local_aigrader_split_lines(string $text): array {
     $parts = array_map('trim', $parts);
     $parts = array_filter($parts, fn($s) => $s !== '');
     return array_values($parts);
+}
+
+/**
+ * Turn a criterion slug from the LLM ("configuracion_y_justificacion_...")
+ * into a human-readable label ("Configuracion y justificacion ..."). The
+ * slug is ASCII snake_case by design (the LLM is instructed to emit
+ * machine-safe identifiers so the PHP parser does not trip on accents),
+ * so the transform is straightforward: replace underscores with spaces,
+ * uppercase the first letter, leave the rest as-is.
+ *
+ * Defensive against empty / whitespace-only input.
+ */
+function local_aigrader_humanize_criterion_slug(string $slug): string {
+    $clean = trim($slug);
+    if ($clean === '') {
+        return '';
+    }
+    return ucfirst(str_replace('_', ' ', $clean));
 }
 
 /**

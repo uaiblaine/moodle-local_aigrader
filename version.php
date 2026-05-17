@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051706;           // YYYYMMDDXX. v1.0.11: drop "tal cual" from the bulk publish action label; drop the trailing arrow from the per-row "Revisar" button.
+$plugin->version   = 2026051707;           // YYYYMMDDXX. v1.0.12: humanise the criterion-score slug labels in review.php (snake_case to Title Case with spaces).
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.11-beta';
+$plugin->release   = 'v1.0.12-beta';

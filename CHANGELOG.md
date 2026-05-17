@@ -5,6 +5,39 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.12-beta] — 2026-05-17
+
+### Changed
+
+- **Criterion-score labels in `review.php` are now humanised.** The
+  per-criterion list under "Puntuación por criterio (de la IA,
+  informativa)" used to render the raw slug names that the LLM emits
+  in its structured JSON output:
+    > - requisitos_imprescindibles: 8,00 / 10
+    > - configuracion_y_justificacion_explicita_de_hiperparametros: 7,00 / 10
+  These slugs are deliberately snake_case + ASCII-only — the LLM
+  prompt instructs the model to emit machine-readable identifiers so
+  the PHP parser doesn't trip on accents or whitespace. Good for the
+  parser, ugly for the teacher.
+
+  Now the slugs are transformed for display via
+  `local_aigrader_humanize_criterion_slug()`:
+    > - Requisitos imprescindibles: 8,00 / 10
+    > - Configuracion y justificacion explicita de hiperparametros: 7,00 / 10
+  Underscores become spaces, first letter uppercased, rest left as-is.
+
+### Trade-off
+
+- Accents are not recovered (the slug never had them in the first
+  place — "Configuracion" not "Configuración"). The teacher reads it
+  as "Configuracion y justificacion ..." and understands. Fully
+  pretty labels would require either (a) maintaining a per-criterion
+  dictionary keyed by slug, or (b) asking the LLM to return both a
+  machine-safe slug and a display label in the JSON. Both options
+  complicate the prompt and parser for marginal gain, especially
+  given the criteria are defined by the teacher in their own
+  language anyway.
+
 ## [v1.0.11-beta] — 2026-05-17
 
 ### Changed
