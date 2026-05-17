@@ -147,15 +147,20 @@ class dispatcher implements extractor_interface {
         // existing warnings system flag the skipped files as side notes.
         $uniqueformats = array_values(array_unique($formats));
         if ($uniqueformats === [extraction_result::FORMAT_UNSUPPORTED]) {
+            // Match on the translated "no soportado: " AND the legacy English
+            // "unsupported: " marker so warnings produced by old code paths
+            // are still picked up. The marker text never reaches the LLM —
+            // only the prompt body and the file headers do — so this is
+            // purely about the teacher-facing summary.
             $skipped = array_values(array_filter(
                 $warnings,
-                fn($w) => stripos($w, 'unsupported') !== false
+                fn($w) => stripos($w, get_string('extract_skip_marker', 'local_aigrader')) !== false
+                       || stripos($w, 'unsupported') !== false
             ));
             return extraction_result::needs_review(
-                'All submitted files are unparseable. '
-                . 'Supported: .txt, .md, .docx, .ipynb, .pdf (≤5 MB, text-based), '
-                . '.zip, code files. '
-                . 'Skipped: ' . implode('; ', $skipped),
+                get_string('extract_needs_review_preamble', 'local_aigrader')
+                    . ' '
+                    . get_string('extract_skipped_list', 'local_aigrader', implode('; ', $skipped)),
                 $skipped
             );
         }
@@ -194,7 +199,7 @@ class dispatcher implements extractor_interface {
         if ($ext === 'docx') {
             $text = docx_extractor::extract_file($file);
             if ($text === null) {
-                return self::unsupported($filename, 'docx (could not extract — file may be malformed)');
+                return self::unsupported($filename, get_string('extract_reason_docx_malformed', 'local_aigrader'));
             }
             return self::wrap_simple($filename, $text, extraction_result::FORMAT_DOCX, $warnings);
         }
@@ -202,7 +207,7 @@ class dispatcher implements extractor_interface {
         if ($ext === 'ipynb') {
             $text = ipynb_extractor::extract_file($file);
             if ($text === null) {
-                return self::unsupported($filename, 'ipynb (could not parse JSON)');
+                return self::unsupported($filename, get_string('extract_reason_ipynb_parse', 'local_aigrader'));
             }
             return self::wrap_simple($filename, $text, extraction_result::FORMAT_IPYNB, $warnings);
         }
@@ -213,18 +218,14 @@ class dispatcher implements extractor_interface {
             // and inside pdf_extractor (defense in depth + lets us format
             // the user-facing message with the actual MB).
             if ($file->get_filesize() > pdf_extractor::MAX_FILESIZE_BYTES) {
-                return self::unsupported($filename, sprintf(
-                    'pdf too large (%s MB; max %s MB to keep memory usage bounded — see plugin README)',
-                    number_format($file->get_filesize() / 1048576, 1),
-                    number_format(pdf_extractor::MAX_FILESIZE_BYTES / 1048576, 1)
-                ));
+                return self::unsupported($filename, get_string('extract_reason_pdf_too_large', 'local_aigrader', (object) [
+                    'actual' => number_format($file->get_filesize() / 1048576, 1),
+                    'max'    => number_format(pdf_extractor::MAX_FILESIZE_BYTES / 1048576, 1),
+                ]));
             }
             $text = pdf_extractor::extract_file($file);
             if ($text === null) {
-                return self::unsupported(
-                    $filename,
-                    'pdf has no extractable text (image-only scan or corrupt content)'
-                );
+                return self::unsupported($filename, get_string('extract_reason_pdf_no_text', 'local_aigrader'));
             }
             return self::wrap_simple($filename, $text, extraction_result::FORMAT_PDF, $warnings);
         }
@@ -232,7 +233,7 @@ class dispatcher implements extractor_interface {
         if ($ext === 'zip') {
             $result = zip_extractor::extract_file($file);
             if (trim($result['text']) === '') {
-                return self::unsupported($filename, 'zip (empty or only contained skipped files)');
+                return self::unsupported($filename, get_string('extract_reason_zip_empty', 'local_aigrader'));
             }
             return [
                 'header'   => '=== ' . $filename . ' (zip archive) ===',
@@ -243,7 +244,10 @@ class dispatcher implements extractor_interface {
         }
 
         // Unsupported extension: tell the docente, do not try to grade.
-        return self::unsupported($filename, $ext === '' ? 'no extension' : $ext);
+        $reason = $ext === ''
+            ? get_string('extract_reason_no_extension', 'local_aigrader')
+            : get_string('extract_reason_unknown_extension', 'local_aigrader', $ext);
+        return self::unsupported($filename, $reason);
     }
 
     /**
@@ -263,7 +267,10 @@ class dispatcher implements extractor_interface {
         }
         if (mb_strlen($text) > self::MAX_PER_FILE) {
             $text = mb_substr($text, 0, self::MAX_PER_FILE);
-            $warnings[] = $filename . ' truncated to ' . self::MAX_PER_FILE . ' characters';
+            $warnings[] = get_string('extract_truncation_warning', 'local_aigrader', (object) [
+                'filename' => $filename,
+                'chars'    => self::MAX_PER_FILE,
+            ]);
         }
 
         $labelext = $codelang !== '' ? ' (' . $codelang . ')' : '';
@@ -276,14 +283,18 @@ class dispatcher implements extractor_interface {
     }
 
     /**
-     * Unsupported.
+     * Build an "unsupported" entry. The header + text remain in English
+     * because they are part of the prompt sent to the LLM (which works
+     * better with English markers in the model's instruction-following
+     * training). The warning surfaced in the teacher UI is localised.
      */
     private static function unsupported(string $filename, string $reason): array {
+        $marker = get_string('extract_skip_marker', 'local_aigrader');
         return [
             'header'   => '=== ' . $filename . ' (UNSUPPORTED: ' . $reason . ') ===',
             'text'     => '[This file could not be processed by AI Grader Pro. The teacher will need to review it manually.]',
             'format'   => extraction_result::FORMAT_UNSUPPORTED,
-            'warnings' => [$filename . ' unsupported: ' . $reason],
+            'warnings' => [$filename . ' ' . $marker . ': ' . $reason],
         ];
     }
 

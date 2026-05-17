@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051701;           // YYYYMMDDXX. v1.0.6: simplify bulk dropdown (drop regrade_ai + mark_manual), unified Calificar con IA button, clickable status counter chips.
+$plugin->version   = 2026051702;           // YYYYMMDDXX. v1.0.7: fix accent typos (Puntuacion, Justificacion), i18n dispatcher skip reasons, collapse long error detail into hover-tooltip info icon.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.6-beta';
+$plugin->release   = 'v1.0.7-beta';

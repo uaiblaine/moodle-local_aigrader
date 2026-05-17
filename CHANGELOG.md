@@ -5,6 +5,82 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.7-beta] — 2026-05-17
+
+### Fixed
+
+- Two missing accents in user-visible Spanish strings on the review
+  form: `Puntuacion por criterio` → `Puntuación por criterio` and
+  `Justificacion (visible para el alumno)` → `Justificación (visible
+  para el alumno)`. Spotted during the v1.0.6 in-vivo walkthrough.
+
+### Changed
+
+- Internationalised the extractor dispatcher. The skip-reason strings
+  that surface in the teacher UI as the inline detail next to the
+  "Formato no soportado" badge were hardcoded English regardless of
+  the teacher's language preference. They now route through
+  `get_string()` and have Spanish + English variants:
+    - The needs-review preamble (`extract_needs_review_preamble`)
+    - The skipped-list separator (`extract_skipped_list`)
+    - The seven per-file reasons (`extract_reason_*` for docx
+      malformed, ipynb parse error, pdf too large, pdf no text, zip
+      empty, no extension, unknown extension)
+    - The truncation warning (`extract_truncation_warning`)
+    - The "no soportado" / "unsupported" marker
+      (`extract_skip_marker`)
+  Effect: a teacher with `lang=es` who triggers grading on a
+  PDF-only submission now sees:
+    > Formato no soportado ⓘ
+    > "Todos los archivos enviados son ilegibles. Formatos
+    >  soportados: .txt, .md, .docx, .ipynb, .pdf (≤5 MB, con texto
+    >  extraíble), .zip y archivos de código. Saltados:
+    >  MACE_project-JorgeSuarezRecio.pdf no soportado: pdf demasiado
+    >  grande (11.1 MB; máximo 5.0 MB — ver README del plugin)."
+- The English text inside the prompt itself (file headers, the
+  "[This file could not be processed...]" placeholder) is kept in
+  English on purpose — the LLM benefits from English instruction
+  markers in its instruction-following training and never reads the
+  teacher's UI strings.
+
+- **Long skip detail collapsed into a hover-tooltip info icon.**
+  Previously a row with `unsupported_format` rendered the full
+  multi-line reason ("All submitted files are unparseable. Supported:
+  .txt, .md...") inline next to the badge, breaking the grid layout
+  to 2-3 lines. Now the badge stays one line and the detail moves
+  into a small ⓘ (U+24D8) icon with the message in its HTML `title`
+  attribute. Browser-native tooltip on hover → works in every theme
+  without depending on Bootstrap popover/tooltip JS being
+  initialised. Same treatment applied to `error` status badges
+  (using the existing `error_classifier::summarize_raw` summary as
+  the tooltip body so provider marketing tails like Groq's "Upgrade
+  to Dev Tier..." URL are stripped).
+- New `local_aigrader_info_icon()` helper in manage.php encapsulates
+  the icon rendering (cursor: help, tabindex=0 for keyboard
+  accessibility, aria-label = full detail for screen readers).
+
+### Notes
+
+- The `decide_outcome()` warning matcher accepts BOTH the
+  localised marker (`get_string('extract_skip_marker', ...)`) and
+  the legacy English string `'unsupported'` so warnings emitted by
+  older code paths or stored in pre-1.0.7 rows are still picked up.
+- Existing rows in `local_aigrader_submission` keep their stored
+  English `error_message` until the teacher re-triggers grading on
+  them (clicking "Calificar con IA" re-runs the dispatcher and
+  overwrites the row with the localised reason). There is no
+  retroactive migration — pre-1.0.7 message text is left in place.
+
+### Tests
+
+- All 85 tests / 199 assertions green
+  (`local/aigrader/tests/` test suite).
+- Dispatcher outcome tests (`dispatcher_outcome_test.php`) still
+  pass because Moodle's phpunit env runs in English by default;
+  asserting on `'unparseable'` matches the English form of
+  `extract_needs_review_preamble`, and the legacy marker fallback
+  catches the `'research.pdf unsupported: pdf'` fixture warnings.
+
 ## [v1.0.6-beta] — 2026-05-17
 
 ### Changed

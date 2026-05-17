@@ -114,7 +114,7 @@ $string['review_pagetitle']       = 'Revisar propuesta IA · {$a}';
 $string['review_heading']         = 'Revisar propuesta IA: {$a->assign} — {$a->student}';
 $string['review_submission_text'] = 'Entrega del alumno';
 $string['review_proposed']        = 'Nota y feedback propuestos (editables)';
-$string['review_criterion_scores'] = 'Puntuacion por criterio (de la IA, informativa)';
+$string['review_criterion_scores'] = 'Puntuación por criterio (de la IA, informativa)';
 $string['review_proposed_at']     = 'Propuesta hecha el {$a}';
 $string['review_proposed_by']     = 'por {$a->provider} ({$a->model})';
 $string['manualfallback_banner']  = 'La calificación con IA no estuvo disponible para esta entrega, por lo que el formulario está vacío. Rellena nota y feedback manualmente; "Aprobar y publicar" los escribe al gradebook igual que con las propuestas IA. Motivo:';
@@ -127,7 +127,7 @@ $string['field_strengths']          = 'Aciertos';
 $string['field_strengths_hint']     = 'Uno por linea. Se mostrara al alumno como feedback positivo.';
 $string['field_improvements']       = 'Mejorables';
 $string['field_improvements_hint']  = 'Uno por linea. Sugerencias constructivas que vera el alumno.';
-$string['field_justification']      = 'Justificacion (visible para el alumno)';
+$string['field_justification']      = 'Justificación (visible para el alumno)';
 
 $string['btn_review']          = 'Revisar →';
 $string['btn_view_published']  = 'Ver ✓';
@@ -295,3 +295,24 @@ $string['count_none']              = '{$a} sin calificar IA';
 $string['count_filter_to']         = 'Filtrar: {$a}';
 $string['count_clear_filter']      = 'Mostrar todas';
 $string['count_no_rows_match_filter'] = 'No hay entregas en este estado. Quita el filtro para ver el resto.';
+
+// -----------------------------------------------------------------------.
+// Extraction (dispatcher.php) — reasons a file or submission was skipped.
+//
+// These strings surface in the teacher UI as the inline detail next to the
+// "Formato no soportado" badge on manage.php. They used to be hardcoded
+// English in the dispatcher; v1.0.7 routes them through get_string().
+// -----------------------------------------------------------------------.
+
+$string['extract_skip_marker']            = 'no soportado';
+$string['extract_needs_review_preamble']  = 'Todos los archivos enviados son ilegibles. Formatos soportados: .txt, .md, .docx, .ipynb, .pdf (≤5 MB, con texto extraíble), .zip y archivos de código.';
+$string['extract_skipped_list']           = 'Saltados: {$a}.';
+
+$string['extract_reason_docx_malformed']     = 'docx (no se pudo extraer; el archivo podría estar dañado)';
+$string['extract_reason_ipynb_parse']        = 'ipynb (no se pudo parsear el JSON)';
+$string['extract_reason_pdf_too_large']      = 'pdf demasiado grande ({$a->actual} MB; máximo {$a->max} MB — ver README del plugin)';
+$string['extract_reason_pdf_no_text']        = 'pdf sin texto extraíble (puede ser un escaneo solo-imagen o contenido dañado)';
+$string['extract_reason_zip_empty']          = 'zip (vacío o sólo contiene archivos no soportados)';
+$string['extract_reason_no_extension']       = 'archivo sin extensión';
+$string['extract_reason_unknown_extension']  = 'extensión no soportada: {$a}';
+$string['extract_truncation_warning']        = '{$a->filename} truncado a {$a->chars} caracteres';

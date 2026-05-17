@@ -515,39 +515,68 @@ echo $OUTPUT->footer();
 // -------------------------------------------------------------------.
 /**
  * Render the AI grading status as a badge.
+ *
+ * For statuses that carry an error/skip detail message, the long text is
+ * collapsed into a small ⓘ icon. The detail is exposed via the HTML
+ * `title` attribute (native browser tooltip on hover — keeps the row to
+ * one line and works in every theme without depending on Bootstrap
+ * popover/tooltip JS being initialised). The detail banner above the
+ * table still has the full "Show raw error" disclosure for cases where
+ * the teacher needs to copy the text out.
  */
 function local_aigrader_render_status(?string $status, ?string $errormsg): string {
     if ($status === null) {
-        return html_writer::span(get_string('status_none', 'local_aigrader'), 'badge bg-secondary');
+        return html_writer::span(get_string('status_none', 'local_aigrader'), 'badge bg-secondary text-white');
     }
     switch ($status) {
         case 'pending_ai':
-            return html_writer::span(get_string('status_pending', 'local_aigrader'), 'badge bg-info');
+            return html_writer::span(get_string('status_pending', 'local_aigrader'), 'badge bg-info text-white');
         case 'ai_proposed':
-            return html_writer::span(get_string('status_proposed', 'local_aigrader'), 'badge bg-success');
+            return html_writer::span(get_string('status_proposed', 'local_aigrader'), 'badge bg-success text-white');
         case 'teacher_reviewed':
-            return html_writer::span(get_string('status_reviewed', 'local_aigrader'), 'badge bg-primary');
+            return html_writer::span(get_string('status_reviewed', 'local_aigrader'), 'badge bg-primary text-white');
         case 'published':
-            return html_writer::span(get_string('status_published', 'local_aigrader'), 'badge bg-success');
+            return html_writer::span(get_string('status_published', 'local_aigrader'), 'badge bg-success text-white');
         case 'error':
-            // Truncate the raw error and drop provider marketing tails (e.g.
-            // Groq's "Upgrade to Dev Tier..." URL). The full text is still
-            // available in the banner's "Show raw error" disclosure.
-            $badge = html_writer::span(get_string('status_error', 'local_aigrader'), 'badge bg-danger');
+            $badge = html_writer::span(get_string('status_error', 'local_aigrader'), 'badge bg-danger text-white');
             if ($errormsg) {
+                // Use the classifier's summary as the tooltip body — it
+                // strips provider marketing tails (e.g. Groq's "Upgrade to
+                // Dev Tier..." URL) so the hovered detail stays useful.
                 $short = \local_aigrader\error_classifier::summarize_raw($errormsg);
-                $badge .= ' ' . html_writer::span(s($short), 'small text-muted');
+                $badge .= local_aigrader_info_icon($short);
             }
             return $badge;
         case 'unsupported_format':
             $badge = html_writer::span(get_string('status_unsupported', 'local_aigrader'), 'badge bg-warning text-dark');
             if ($errormsg) {
-                // The dispatcher's needs_review() reason already states which
-                // files were skipped and what formats we accept. Show it.
-                $badge .= ' ' . html_writer::span(s($errormsg), 'small text-muted');
+                $badge .= local_aigrader_info_icon($errormsg);
             }
             return $badge;
         default:
-            return html_writer::span(s($status), 'badge bg-secondary');
+            return html_writer::span(s($status), 'badge bg-secondary text-white');
     }
+}
+
+/**
+ * Render a small "info" icon (Unicode ⓘ) whose HTML `title` attribute
+ * carries a longer detail string. Used to collapse multi-line skip /
+ * error reasons that would otherwise break the grid layout.
+ *
+ * Unicode ⓘ (U+24D8) renders consistently across platforms without
+ * requiring any specific FontAwesome variant — important because some
+ * Moodle themes load fa-* and others load fa-solid-*.
+ *
+ * @param string $detail Plain text shown on hover. Will be HTML-escaped.
+ * @return string HTML for the icon to be appended to the badge.
+ */
+function local_aigrader_info_icon(string $detail): string {
+    return ' ' . html_writer::tag('span', 'ⓘ', [
+        'class'      => 'aigrader-info-icon ms-1 text-muted',
+        'title'      => $detail,
+        'tabindex'   => 0,
+        'role'       => 'button',
+        'aria-label' => $detail,
+        'style'      => 'cursor: help; font-size: 1.1em;',
+    ]);
 }

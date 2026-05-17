@@ -295,3 +295,20 @@ $string['count_none']              = '{$a} not yet graded';
 $string['count_filter_to']         = 'Filter: {$a}';
 $string['count_clear_filter']      = 'Show all';
 $string['count_no_rows_match_filter'] = 'No submissions in this state. Clear the filter to see the rest.';
+
+// -----------------------------------------------------------------------.
+// Extraction (dispatcher.php) — reasons a file or submission was skipped.
+// -----------------------------------------------------------------------.
+
+$string['extract_skip_marker']            = 'unsupported';
+$string['extract_needs_review_preamble']  = 'All submitted files are unparseable. Supported formats: .txt, .md, .docx, .ipynb, .pdf (≤5 MB, text-based), .zip and code files.';
+$string['extract_skipped_list']           = 'Skipped: {$a}.';
+
+$string['extract_reason_docx_malformed']     = 'docx (could not extract — file may be malformed)';
+$string['extract_reason_ipynb_parse']        = 'ipynb (could not parse JSON)';
+$string['extract_reason_pdf_too_large']      = 'pdf too large ({$a->actual} MB; max {$a->max} MB — see plugin README)';
+$string['extract_reason_pdf_no_text']        = 'pdf has no extractable text (image-only scan or corrupt content)';
+$string['extract_reason_zip_empty']          = 'zip (empty or only contained skipped files)';
+$string['extract_reason_no_extension']       = 'no extension';
+$string['extract_reason_unknown_extension']  = 'unsupported extension: {$a}';
+$string['extract_truncation_warning']        = '{$a->filename} truncated to {$a->chars} characters';
