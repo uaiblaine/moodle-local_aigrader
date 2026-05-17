@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-// v1.0.23-beta: Behat phpunit_util fatal fix + CI threshold relaxation.
-$plugin->version   = 2026051718;           // YYYYMMDDXX format.
+// v1.0.24-beta: phpcs autoload.php fix + drop 3 Behat-incompatible scenarios.
+$plugin->version   = 2026051719;           // YYYYMMDDXX format.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.23-beta';
+$plugin->release   = 'v1.0.24-beta';

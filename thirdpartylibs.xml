@@ -36,4 +36,16 @@
             <copyright>Jordi Boggiano</copyright>
         </copyrights>
     </library>
+    <library>
+        <location>thirdparty/vendor/autoload.php</location>
+        <name>composer/autoload-entrypoint</name>
+        <description>Composer-generated autoloader entry point. Required so PHP can locate smalot/pdfparser at runtime via thirdparty/vendor/autoload.php. Single file at the vendor/ root, sibling to the composer/ subdirectory.</description>
+        <version>2.x</version>
+        <license>MIT</license>
+        <repository>https://github.com/composer/composer</repository>
+        <copyrights>
+            <copyright>Nils Adermann</copyright>
+            <copyright>Jordi Boggiano</copyright>
+        </copyrights>
+    </library>
 </libraries>
