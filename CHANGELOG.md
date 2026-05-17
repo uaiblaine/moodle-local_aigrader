@@ -5,6 +5,84 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.16-beta] — 2026-05-17
+
+### Changed
+
+- **The review-form "Reject" button is now a real "Save without
+  publishing".** Pilot user feedback pointed out that the third
+  action on the review form was a phantom: the label said "Rechazar
+  (calificar manualmente)" but pressing it (a) discarded any edits
+  the teacher had typed into the form, (b) did NOT take the teacher
+  anywhere where manual grading could happen, and (c) just flagged
+  the row as `teacher_reviewed` with no actionable side effect.
+  Teachers expected the button to save what they had typed,
+  exactly the "modificar el contenido y no publicar" use case.
+
+  After this commit:
+    - Label: ES `"Guardar sin publicar"`, EN `"Save without
+      publishing"`.
+    - Style: neutral `btn-outline-secondary` (was `btn-outline-danger`
+      which signalled destruction).
+    - No more `onclick="return confirm(...)"` dialog — saving a draft
+      is non-destructive and doesn't need a guardrail.
+    - Behaviour: reads `finalgrade`, `finalstrengths`,
+      `finalimprovements`, `finaljustification` exactly like the
+      "Aprobar y publicar" path, validates the grade range, persists
+      them as `final_grade` + `final_feedback` on the
+      `local_aigrader_submission` row, and sets `status =
+      'teacher_reviewed'`. Does NOT call `local_aigrader_publish_grade`
+      — the gradebook stays untouched.
+    - Toast on success: ES `"Guardado sin publicar. La nota no está
+      en el cuaderno de calificaciones todavía."`
+    - Audit log: `action = 'save_draft'` (was `'reject'`) so the AI
+      Act trail distinguishes "teacher saved an edited proposal,
+      grading still in progress" from "teacher published" and from
+      "teacher rejected outright" (which is no longer a path).
+
+  Three actions on the review form now form a coherent set, matching
+  the teacher's mental model:
+    1. **Aprobar y publicar** — write to gradebook, final decision.
+    2. **Guardar sin publicar** — persist edits, come back later.
+    3. **Atrás** (existing link) — discard, go back to manage.
+
+### Fixed
+
+- **`PARAM_ALPHA` was stripping the underscore in `'save_draft'`**
+  when read from POST. Same regression class as the v1.0.6 chip
+  filter bug. `optional_param('action', '', PARAM_ALPHA)` returned
+  `'savedraft'` instead of `'save_draft'`, so the handler never
+  matched and the form silently re-rendered as if nothing had been
+  pressed. Changed to `PARAM_ALPHAEXT`. The existing `'approve'`
+  action keeps working under either filter (no underscores).
+
+### Removed
+
+- Lang keys `btn_reject`, `confirm_reject`, `msg_rejected` (es + en).
+  Replaced by `btn_save_draft` and `msg_saved_draft`. No upgrade
+  migration needed — only the rendered text changed; no DB column or
+  capability key references those old strings.
+
+### Verification
+
+- Logged in as `prof_demo`, opened `review.php?submissionid=4`
+  (Pablo Barredo, `ai_proposed`). Typed `6.50` in the grade,
+  `"DRAFT: ediciones del profesor (test save_draft)"` in strengths,
+  `"DRAFT TEST"` in justification, clicked "Guardar sin publicar".
+- Redirect lands on `manage.php?cmid=5` with toast `"Guardado sin
+  publicar. La nota no está en el cuaderno de calificaciones
+  todavía."` Pablo's row badge changed from "Propuesta IA" to
+  "Revisada por profesor" (purple).
+- Reopened `review.php?submissionid=4`. Form re-rendered with
+  `6.50` in grade, the DRAFT strings in the two textareas, exactly
+  what was saved. The AI's original proposal is still in
+  `proposed_feedback` but not displayed — `final_*` takes
+  precedence in the form pre-fill.
+- Gradebook row for Pablo: unchanged (no entry written).
+- Cleaned up the test draft (DB update reverted Pablo's row to
+  pristine `ai_proposed` state so the demo cohort stays
+  representative).
+
 ## [v1.0.15-beta] — 2026-05-17
 
 ### Fixed

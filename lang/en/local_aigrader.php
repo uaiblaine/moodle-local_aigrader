@@ -135,11 +135,10 @@ $string['field_justification']      = 'Justification (visible to the student)';
 $string['btn_review']          = 'Review';
 $string['btn_view_published']  = 'View ✓';
 $string['btn_approve_publish'] = 'Approve and publish';
-$string['btn_reject']          = 'Reject (grade manually)';
-$string['confirm_reject']      = 'This will discard the AI proposal and you will grade manually. Continue?';
+$string['btn_save_draft']      = 'Save without publishing';
 
 $string['msg_published']      = 'Grade approved and published to the gradebook.';
-$string['msg_rejected']       = 'AI proposal rejected. Please grade manually using the standard assignment grader.';
+$string['msg_saved_draft']    = 'Saved without publishing. The grade is not in the gradebook yet.';
 
 $string['feedback_strengths']    = 'Strengths';
 $string['feedback_improvements'] = 'Areas to improve';

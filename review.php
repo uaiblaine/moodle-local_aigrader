@@ -98,22 +98,68 @@ $currentgrade = $proposalrow->final_grade ?? ($proposed['final_grade'] ?? 0);
 // ---------------------------------------------------------------------.
 // Handle POST.
 // ---------------------------------------------------------------------.
-$action = optional_param('action', '', PARAM_ALPHA);
+// PARAM_ALPHAEXT (not PARAM_ALPHA) — the action values contain
+// underscores ('save_draft') and PARAM_ALPHA would silently strip
+// them, leaving $action === 'savedraft' which matches no handler. The
+// form would re-render with no save, indistinguishable from "the
+// teacher pressed nothing".
+$action = optional_param('action', '', PARAM_ALPHAEXT);
 if ($action && data_submitted()) {
     require_sesskey();
 
-    if ($action === 'reject') {
-        $DB->update_record('local_aigrader_submission', (object) [
-            'id'           => $proposalrow->id,
-            'status'       => 'teacher_reviewed',
-            'final_grader' => (int) $USER->id,
-            'timemodified' => time(),
+    if ($action === 'save_draft') {
+        // "Save without publishing": persist whatever the teacher has typed
+        // into the form as final_grade / final_feedback, flag the row as
+        // teacher_reviewed, and STOP — do not push the grade to the
+        // gradebook. The teacher can come back later, edit further, and
+        // either save another draft or approve & publish.
+        //
+        // Same form-field validation as 'approve' so half-typed grades
+        // out of range are rejected at draft time too. The teacher has
+        // to put SOMETHING numeric in the grade field; if they want to
+        // truly abandon without saving anything, "Atrás" is the right
+        // exit.
+        $finalgrade        = required_param('finalgrade', PARAM_FLOAT);
+        $strengthstext     = required_param('finalstrengths', PARAM_RAW_TRIMMED);
+        $improvementstext  = required_param('finalimprovements', PARAM_RAW_TRIMMED);
+        $justification     = required_param('finaljustification', PARAM_RAW_TRIMMED);
+
+        if ($finalgrade < 0 || $finalgrade > 10) {
+            throw new \moodle_exception('errorgradeoutofrange', 'local_aigrader', '', $finalgrade);
+        }
+
+        $finalstrengths    = local_aigrader_split_lines($strengthstext);
+        $finalimprovements = local_aigrader_split_lines($improvementstext);
+
+        $finalfeedback = array_merge(is_array($current) ? $current : [], [
+            'final_grade'    => round((float) $finalgrade, 2),
+            'strengths'      => $finalstrengths,
+            'improvements'   => $finalimprovements,
+            'justification'  => $justification,
         ]);
-        local_aigrader_review_log('reject', $proposalrow, $proposed, null);
+        $finalfeedbackjson = json_encode($finalfeedback, JSON_UNESCAPED_UNICODE);
+
+        $now = time();
+        $DB->update_record('local_aigrader_submission', (object) [
+            'id'             => $proposalrow->id,
+            'status'         => 'teacher_reviewed',
+            'final_grade'    => round((float) $finalgrade, 2),
+            'final_feedback' => $finalfeedbackjson,
+            'final_grader'   => (int) $USER->id,
+            'timemodified'   => $now,
+        ]);
+
+        // Audit log: distinct action value 'save_draft' so the trail
+        // can distinguish "teacher edited but didn't publish" from
+        // "teacher rejected the AI proposal outright" (the v1.0.5
+        // behaviour we removed). For AI-Act compliance it matters
+        // whether human review concluded with a published decision or
+        // is still in progress.
+        local_aigrader_review_log('save_draft', $proposalrow, $proposed, $finalfeedback);
 
         redirect(
             new moodle_url('/local/aigrader/manage.php', ['cmid' => $cm->id]),
-            get_string('msg_rejected', 'local_aigrader'),
+            get_string('msg_saved_draft', 'local_aigrader'),
             null,
             \core\output\notification::NOTIFY_INFO
         );
@@ -456,15 +502,18 @@ echo html_writer::tag(
     get_string('btn_approve_publish', 'local_aigrader'),
     ['type' => 'submit', 'name' => 'action', 'value' => 'approve', 'class' => 'btn btn-success']
 );
+// "Save without publishing": neutral secondary style (not red/danger as
+// in v1.0.x — saving a draft is non-destructive) and no JS confirm()
+// since pressing the wrong button is recoverable (the teacher can
+// re-open Revisar and either save another draft or publish).
 echo html_writer::tag(
     'button',
-    get_string('btn_reject', 'local_aigrader'),
+    get_string('btn_save_draft', 'local_aigrader'),
     [
-        'type'    => 'submit',
-        'name'    => 'action',
-        'value'   => 'reject',
-        'class'   => 'btn btn-outline-danger ms-2',
-        'onclick' => "return confirm('" . get_string('confirm_reject', 'local_aigrader') . "');",
+        'type'  => 'submit',
+        'name'  => 'action',
+        'value' => 'save_draft',
+        'class' => 'btn btn-outline-secondary ms-2',
     ]
 );
 echo html_writer::link(

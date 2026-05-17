@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051710;           // YYYYMMDDXX. v1.0.15: distinguish 'ai_proposed' (cyan) from 'published' (green) — previously both used bg-success which was visually confusing.
+$plugin->version   = 2026051711;           // YYYYMMDDXX. v1.0.16: the "Reject" button is now a real "Save without publishing" — persists teacher edits to local_aigrader_submission without touching the gradebook.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.15-beta';
+$plugin->release   = 'v1.0.16-beta';

@@ -135,11 +135,10 @@ $string['field_justification']      = 'Justificación (visible para el alumno)';
 $string['btn_review']          = 'Revisar';
 $string['btn_view_published']  = 'Ver ✓';
 $string['btn_approve_publish'] = 'Aprobar y publicar';
-$string['btn_reject']          = 'Rechazar (calificar manualmente)';
-$string['confirm_reject']      = 'Esto descarta la propuesta IA y tendras que calificar manualmente. Continuar?';
+$string['btn_save_draft']      = 'Guardar sin publicar';
 
 $string['msg_published']      = 'Nota aprobada y publicada en el libro de calificaciones.';
-$string['msg_rejected']       = 'Propuesta IA rechazada. Califica manualmente usando la pantalla estandar de la tarea.';
+$string['msg_saved_draft']    = 'Guardado sin publicar. La nota no está en el cuaderno de calificaciones todavía.';
 
 $string['feedback_strengths']    = 'Aciertos';
 $string['feedback_improvements'] = 'A mejorar';
