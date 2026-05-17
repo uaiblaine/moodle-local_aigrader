@@ -275,10 +275,14 @@ $chipdefs = [
     'none'             => ['label' => 'count_none',             'class' => 'bg-secondary text-white'],
 ];
 
-echo html_writer::start_div('aigrader-counter mb-3 d-flex flex-wrap align-items-center gap-2');
+// gap-3 (1rem) between chips horizontally; row-gap-2 (0.5rem) when
+// the chips wrap to multiple lines on narrow screens. Pilot teacher
+// feedback flagged the v1.0.6 spacing as "todo junto" — the chips
+// sit too close to each other and to the bulk bar below.
+echo html_writer::start_div('aigrader-counter mb-4 d-flex flex-wrap align-items-center gap-3 row-gap-2');
 echo html_writer::tag('strong',
     get_string('count_total', 'local_aigrader', count($rows)),
-    ['class' => 'me-2']
+    ['class' => 'me-1']
 );
 
 foreach ($chipdefs as $key => $def) {
@@ -369,7 +373,10 @@ echo html_writer::start_tag('form', [
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'cmid',    'value' => $cmid]);
 
-echo html_writer::start_div('aigrader-bulk-bar d-flex align-items-center gap-2 mb-2');
+// gap-3 (1rem) between label, dropdown and Apply button so the
+// elements breathe a bit; previously gap-2 made them look like a
+// single visual blob.
+echo html_writer::start_div('aigrader-bulk-bar d-flex flex-wrap align-items-center gap-3 mb-3');
 echo html_writer::tag('label', get_string('bulk_label_with_selected', 'local_aigrader'),
     ['for' => 'aigrader-bulk-action', 'class' => 'form-label mb-0']);
 
@@ -473,11 +480,23 @@ foreach ($visiblerows as $r) {
         // soft "re-grade" option whenever a Revisar button is already the
         // primary CTA for the row.
         $isprimaryforrow = ($r->ai_status === null || $r->ai_status === 'pending_ai');
-        $action .= html_writer::empty_tag('input', [
+        $btnattrs = [
             'type'  => 'submit',
             'value' => $btnlabel,
             'class' => $isprimaryforrow ? 'btn btn-primary btn-sm' : 'btn btn-outline-secondary btn-sm',
-        ]);
+        ];
+        // Native browser confirm() when re-grading a row that has
+        // already been published. The gradebook value stays put either
+        // way, but a published row resetting back to "Propuesta IA"
+        // after an accidental click is confusing for the teacher and
+        // wastes provider tokens. The bulk action's confirmation page
+        // is the equivalent safety gate on the bulk path. JSON-encode
+        // the message so accents/quotes survive the inline attribute.
+        if ($r->ai_status === 'published') {
+            $confirmmsg = get_string('confirm_regrade_published', 'local_aigrader');
+            $btnattrs['onclick'] = 'return confirm(' . json_encode($confirmmsg) . ');';
+        }
+        $action .= html_writer::empty_tag('input', $btnattrs);
         $action .= html_writer::end_tag('form');
     } else {
         $action .= html_writer::span(get_string('btn_pending', 'local_aigrader'), 'text-muted');

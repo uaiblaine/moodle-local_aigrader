@@ -312,3 +312,6 @@ $string['extract_reason_zip_empty']          = 'zip (empty or only contained ski
 $string['extract_reason_no_extension']       = 'no extension';
 $string['extract_reason_unknown_extension']  = 'unsupported extension: {$a}';
 $string['extract_truncation_warning']        = '{$a->filename} truncated to {$a->chars} characters';
+
+// Inline confirmation when re-grading an already-published row.
+$string['confirm_regrade_published'] = 'This submission is already published. Re-grade with AI? The current gradebook value will stay untouched, but the status will revert to "AI proposal" until you approve again.';

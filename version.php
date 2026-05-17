@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051702;           // YYYYMMDDXX. v1.0.7: fix accent typos (Puntuacion, Justificacion), i18n dispatcher skip reasons, collapse long error detail into hover-tooltip info icon.
+$plugin->version   = 2026051703;           // YYYYMMDDXX. v1.0.8: inline confirm() on per-row "Calificar con IA" for already-published rows; more breathing room (gap-3) in counter chips and bulk bar.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.7-beta';
+$plugin->release   = 'v1.0.8-beta';

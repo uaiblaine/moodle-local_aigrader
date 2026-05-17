@@ -5,6 +5,39 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.8-beta] — 2026-05-17
+
+### Added
+
+- **Inline confirmation on per-row "Calificar con IA" for
+  already-published rows.** Pilot feedback noted that the button was
+  rendered on Publicada rows too, which is correct (a teacher might
+  legitimately want to re-grade after a student re-submission), but
+  the button gave no warning before consuming provider tokens and
+  flipping the row's badge back from "Publicada" to "Propuesta IA".
+  The per-row submit now carries a native `confirm()` handler when
+  the row is in `published` state, showing the localised message
+  `confirm_regrade_published`:
+    > "Esta entrega ya está publicada. ¿Recalificar con IA? La
+    >  nota actual del cuaderno de calificaciones no cambiará,
+    >  pero el estado volverá a «Propuesta IA» hasta que vuelvas
+    >  a aprobar."
+  Cancel keeps the row as-is. The bulk path's intermediate
+  confirmation page is the equivalent safety gate for cohort-level
+  re-grading.
+
+### Changed
+
+- **More breathing room in the counter chips and bulk bar.** The
+  v1.0.6 status counter and "Con seleccionadas..." bar used
+  Bootstrap `gap-2` (0.5rem) which the pilot teacher reported as
+  "todo junto" — visually the chips read as one continuous strip
+  and the bulk bar's label/select/button looked glued together.
+  Bumped both to `gap-3` (1rem), added `row-gap-2` on the
+  flex-wrap'd counter so the vertical break on narrow screens also
+  gets a gap, and bumped the counter's bottom margin to `mb-4`
+  (1.5rem) so it doesn't crowd the bulk bar below.
+
 ## [v1.0.7-beta] — 2026-05-17
 
 ### Fixed
