@@ -1,0 +1,49 @@
+/* Plugin: local_aigrader — visual rules that are too theme-specific
+ * to rely on Bootstrap utility classes alone. Moodle auto-loads this
+ * file via the styles.php sub-system on every page where the plugin
+ * is referenced.
+ *
+ * Rationale for owning the gap rules here instead of using `.gap-3`
+ * etc. on the elements: Moodle 4.5 ships Bootstrap 5.x, but the Moove
+ * theme (the one most demo installs use, including ours) doesn't ship
+ * the `gap-*` utility classes — we verified at runtime that
+ * `getComputedStyle(el).gap` returns `"normal"` for elements that
+ * carry the class. So the spacing degraded to "just the chip's own
+ * padding" and the pilot teacher reported the counter bar as "todo
+ * junto". Forcing `gap` via plugin CSS guarantees consistent spacing
+ * regardless of which theme the site is on.
+ */
+
+/* Counter chips row (above the bulk bar).
+ * 1rem between chips horizontally, 0.5rem when they wrap to a new
+ * line on narrow viewports. */
+.aigrader-counter {
+    gap: 1rem;
+    row-gap: 0.5rem;
+}
+
+/* "Con seleccionadas..." bar — label, dropdown, Apply button.
+ * Same 1rem gap so the three controls clearly read as separate
+ * elements rather than a single visual blob. */
+.aigrader-bulk-bar {
+    gap: 1rem;
+}
+
+/* "Mostrar por página" small form. Tighter gap (0.5rem) is enough
+ * here because there are only two short controls. */
+.aigrader-perpage-form {
+    gap: 0.5rem;
+}
+
+/* Action column cells: small but consistent gap between the
+ * "Revisar" link and the "Calificar con IA" button. Previously
+ * `me-1` (0.25rem) was applied only to the Revisar link, leaving
+ * the second button hugging it. */
+.aigrader-manage-table td:last-child .btn,
+.aigrader-manage-table td:last-child form {
+    margin-right: 0.4rem;
+}
+.aigrader-manage-table td:last-child .btn:last-child,
+.aigrader-manage-table td:last-child form:last-child {
+    margin-right: 0;
+}

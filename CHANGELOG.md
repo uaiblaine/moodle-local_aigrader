@@ -5,6 +5,42 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.14-beta] — 2026-05-17
+
+### Fixed
+
+- **Manage page spacing was 0 in practice.** v1.0.8 added Bootstrap
+  `gap-3` / `gap-2` / `row-gap-2` utility classes to the counter
+  chips row, the "Con seleccionadas..." bulk bar and the "Mostrar
+  por página" form, and v1.0.9 kept them through the table_sql
+  refactor. Both rounds verified the classes were present in the
+  HTML and assumed the spacing was applied. Pilot teacher review
+  flagged the controls still looked "todo junto"; runtime check via
+  `getComputedStyle(el).gap` returned `"normal"` (i.e. 0) for all
+  three containers — the Moove theme ships a Bootstrap 5 build
+  without the `gap-*` utility classes, so the rules degraded to "no
+  gap, only the chip's own padding".
+
+  This commit adds the plugin's own `styles.css` (Moodle auto-loads
+  it) with explicit `gap` rules keyed by the existing wrapper class
+  names: `.aigrader-counter { gap: 1rem; row-gap: 0.5rem; }`,
+  `.aigrader-bulk-bar { gap: 1rem; }`,
+  `.aigrader-perpage-form { gap: 0.5rem; }`. Runtime check after
+  this fix returns `gap: 8px 16px` and `gap: 16px` respectively
+  (the resolved pixel values), so the rules now actually take
+  effect regardless of which theme the site is on.
+
+### Added
+
+- Small spacing rule for the "Acción" column buttons in
+  `.aigrader-manage-table`: `margin-right: 0.4rem` between adjacent
+  buttons / forms, reset to 0 on the last child. Previously the
+  "Revisar" link had `me-1` (0.25rem) applied directly but the
+  inline form holding "Calificar con IA" had no margin at all, so
+  the two buttons read as one chunk. Same fix as above — the
+  Bootstrap utility classes weren't being applied, plugin CSS now
+  carries the responsibility.
+
 ## [v1.0.13-beta] — 2026-05-17
 
 ### Added
