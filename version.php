@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051712;           // YYYYMMDDXX. v1.0.17: add three new language packs — Brazilian Portuguese (pt_br), Catalan (ca), French (fr).
+$plugin->version   = 2026051713;           // YYYYMMDDXX. v1.0.18: Plugin Directory submission readiness — TESTPLAN.md, README refresh, listing copy.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.17-beta';
+$plugin->release   = 'v1.0.18-beta';

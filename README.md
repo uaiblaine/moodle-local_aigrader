@@ -6,8 +6,9 @@ Language Model accessed through Moodle's AI Subsystem; the teacher reviews,
 edits if needed, and decides whether to publish. Nothing reaches the
 gradebook without an explicit teacher click.
 
-[![Tests](https://img.shields.io/badge/PHPUnit-66%20tests%20passing-brightgreen)](#tests)
+[![Tests](https://img.shields.io/badge/PHPUnit-85%20tests%20passing-brightgreen)](#tests)
 [![Code style](https://img.shields.io/badge/phpcs-0%20errors-brightgreen)](#code-quality)
+[![Languages](https://img.shields.io/badge/i18n-5%20languages-blue)](#features)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
 ---
@@ -63,11 +64,20 @@ contains the teacher's `user.id`, never a system id.
   payload too large, auth failure, network error, parse error), the
   teacher sees a localised banner with the cause, a suggested action,
   and a per-student "Retry now" button. No log-diving required.
-- 🌐 **i18n**: English and Spanish out of the box, with symmetric key
-  coverage. Other languages welcome via PR.
+- 📋 **Bulk actions**: select N rows + "With selected…" dropdown to
+  publish or re-grade many submissions in one click. Hybrid sync/async
+  execution: ≤5 rows run inline, larger batches queue as adhoc tasks
+  so the request returns immediately.
+- 📊 **Paginated + sortable manage page**: server-side `\table_sql`
+  with 10 / 25 / 50 / 100 / All per-page options, sortable columns,
+  and a counter banner of clickable status chips that filter the
+  view (ai_proposed / teacher_reviewed / published / problems / none).
+- 🌐 **i18n**: ships with English, Spanish, Brazilian Portuguese,
+  Catalan and French — all 194 strings, full key parity. Other
+  languages welcome via PR or via AMOS once on the Plugin Directory.
 - 🛡️ **Privacy provider** implementing GDPR Art. 15 (data export),
   Art. 17 (deletion) and the AI Act Annex III audit trail.
-- ✅ **Tested**: 66 PHPUnit tests + 2 Behat scenarios covering the most
+- ✅ **Tested**: 85 PHPUnit tests + 2 Behat scenarios covering the most
   fragile integration point (the hook into `mod_assign`'s edit form).
 
 ## Requirements
@@ -194,7 +204,12 @@ vendor/bin/phpunit --testsuite local_aigrader_testsuite
 vendor/bin/behat --tags @local_aigrader
 ```
 
-Current status: 66 PHPUnit tests + 2 Behat scenarios, all passing.
+Current status: 85 PHPUnit tests + 2 Behat scenarios, all passing.
+
+For manual end-to-end smoke testing (after an upgrade, or during
+peer review), see [TESTPLAN.md](TESTPLAN.md) — 18 scenarios walking
+through install, configure, grade, publish, bulk, filter, error
+paths, privacy export and uninstall.
 
 ## Code quality
 
@@ -209,16 +224,44 @@ strings).
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the release history. Highlights:
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+Highlights:
 
+- **v1.0.17-beta** — Brazilian Portuguese (`pt_br`), Catalan (`ca`)
+  and French (`fr`) translations. Full key parity (194 strings each).
+- **v1.0.16-beta** — The third action on the review form is now a
+  real "Save without publishing" — persists teacher edits without
+  touching the gradebook.
+- **v1.0.15-beta** — Distinct colour for "AI proposed" (cyan) vs
+  "Published" (green); previously both used green which the pilot
+  flagged as confusing.
+- **v1.0.14-beta** — Own `styles.css` forces the manage-page spacing
+  rules (Moove ships a Bootstrap build without `gap-*` utilities).
+- **v1.0.13-beta** — Microcopy, extracted-text size, and structured
+  warnings under the "Submission as seen by the AI" disclosure.
+- **v1.0.12-beta** — Humanise criterion-score labels (snake_case →
+  Title Case).
+- **v1.0.11-beta** — UX polish: shorter bulk label, drop arrow from
+  Revisar.
+- **v1.0.10-beta** — Drop misleading "openai" tag from the review
+  meta-info (was hiding the actual model).
+- **v1.0.9-beta** — Paginate + sort the manage page via `\table_sql`,
+  matching mod_assign's native grading view.
+- **v1.0.8-beta** — Per-row `confirm()` when re-grading a published
+  row; counter-bar spacing fixed.
+- **v1.0.7-beta** — Typo fixes; i18n of dispatcher skip reasons;
+  long error details collapsed into a hover-tooltip ⓘ icon.
+- **v1.0.6-beta** — Simplified bulk dropdown to two actions; clickable
+  status counter chips with filter; `PARAM_ALPHAEXT` for filter param.
+- **v1.0.5-beta** — Bulk actions on the manage page: checkbox column
+  + "With selected…" dropdown + confirmation page for destructive
+  actions. Hybrid sync/async execution.
 - **v1.0.4-beta** — Plugin Directory submission readiness: LICENSE,
-  `thirdpartylibs.xml`, dev CLI scripts removed, phpcs cleanup, README
-  rewrite, `\assign::save_grade()` instead of direct DML on
-  `assign_grades`.
+  `thirdpartylibs.xml`, dev CLI scripts removed, phpcs cleanup,
+  README rewrite, `\assign::save_grade()` instead of direct DML.
 - **v1.0.3-beta** — PDF support via vendored `smalot/pdfparser`.
-- **v1.0.2-beta** — Locale-safe grade input (fixes blank grade field on
-  non-English sites), `needs_manual_review` for unprocessable
-  submissions.
+- **v1.0.2-beta** — Locale-safe grade input, `needs_manual_review`
+  for unprocessable submissions.
 - **v1.0.1-beta** — Classified error banner, ipynb output truncation,
   retry in-place, i18n dedupe.
 - **v1.0.0-beta** — First pilot-ready release with full Privacy

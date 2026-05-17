@@ -5,6 +5,46 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.18-beta] — 2026-05-17
+
+### Added
+
+- **`TESTPLAN.md`** — manual smoke-test walkthrough with 18 scenarios
+  covering install, capability assignment, admin settings,
+  per-assignment configuration, the full grading pipeline (sync and
+  async), the HITL review (Approve and publish + Save without
+  publishing), bulk actions, filter chips, pagination + sorting, the
+  unsupported-format fallback, the classified-error path, privacy
+  export and deletion, multi-language render, and uninstall. Designed
+  to be runnable end-to-end in 30-45 minutes by a peer reviewer who
+  has never seen the plugin.
+- **`PLUGIN_DIRECTORY_LISTING.md`** — copy to paste into the Moodle
+  Plugin Directory submission form: short description (199 chars and
+  118-char one-liner alternative), full markdown description with
+  feature highlights and EU AI-Act note, tag list, category
+  recommendations, plus a template for the per-version release notes
+  field.
+
+### Changed
+
+- **`README.md`** refresh: badge updated 66 → 85 PHPUnit tests, new
+  "Languages" badge, two new feature bullets (bulk actions and the
+  paginated `\table_sql` manage page), i18n line rewritten to
+  reflect 5 shipping languages, "Highlights" section in the
+  Changelog header extended to cover v1.0.5 - v1.0.17, link added
+  to the new `TESTPLAN.md`.
+
+### Notes
+
+- These three docs are what was missing to make the plugin
+  submission-ready. The code itself was already passing peer-review
+  criteria from v1.0.4 onwards (LICENSE, thirdpartylibs.xml, phpcs
+  clean, capabilities, privacy provider, etc.).
+- Screenshots for the Plugin Directory listing are still pending —
+  they need the demo cohort's student names anonymised first (the
+  current data has real Uniovi pilot names), so they will land in a
+  separate commit.
+
 ## [v1.0.17-beta] — 2026-05-17
 
 ### Added
