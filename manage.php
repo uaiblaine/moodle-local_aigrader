@@ -138,9 +138,9 @@ if ($action === 'enqueue' && data_submitted()) {
 // underscores (e.g. 'ai_proposed') and PARAM_ALPHA would silently strip
 // them, making the filter look broken to the teacher.
 // -------------------------------------------------------------------.
-$filter  = optional_param('filter',  '',   PARAM_ALPHAEXT);
-$perpage = optional_param('perpage', 25,   PARAM_INT);
-$page    = optional_param('page',    0,    PARAM_INT);
+$filter  = optional_param('filter', '', PARAM_ALPHAEXT);
+$perpage = optional_param('perpage', 25, PARAM_INT);
+$page    = optional_param('page', 0, PARAM_INT);
 
 $validfilters = ['ai_proposed', 'teacher_reviewed', 'published', 'problems', 'none'];
 if ($filter !== '' && !in_array($filter, $validfilters, true)) {
@@ -284,15 +284,16 @@ if ($counts['problems'] > 0) {
 // gradebook" both in green was confusing. ai_proposed now uses bg-info
 // (cyan = "there is information for you to act on").
 $chipdefs = [
-    'ai_proposed'      => ['label' => 'count_ai_proposed',      'class' => 'bg-info text-white'],
+    'ai_proposed'      => ['label' => 'count_ai_proposed', 'class' => 'bg-info text-white'],
     'teacher_reviewed' => ['label' => 'count_teacher_reviewed', 'class' => 'bg-primary text-white'],
-    'published'        => ['label' => 'count_published',        'class' => 'bg-success text-white'],
-    'problems'         => ['label' => 'count_problems',         'class' => 'bg-warning text-dark'],
-    'none'             => ['label' => 'count_none',             'class' => 'bg-secondary text-white'],
+    'published'        => ['label' => 'count_published', 'class' => 'bg-success text-white'],
+    'problems'         => ['label' => 'count_problems', 'class' => 'bg-warning text-dark'],
+    'none'             => ['label' => 'count_none', 'class' => 'bg-secondary text-white'],
 ];
 
 echo html_writer::start_div('aigrader-counter mb-4 d-flex flex-wrap align-items-center gap-3 row-gap-2');
-echo html_writer::tag('strong',
+echo html_writer::tag(
+    'strong',
     get_string('count_total', 'local_aigrader', $totalrows),
     ['class' => 'me-1']
 );
@@ -337,7 +338,8 @@ if ($filter !== '') {
     if ($perpage !== 25) {
         $clearurl->param('perpage', $perpage);
     }
-    echo html_writer::link($clearurl,
+    echo html_writer::link(
+        $clearurl,
         get_string('count_clear_filter', 'local_aigrader'),
         ['class' => 'ms-2 small']
     );
@@ -360,11 +362,14 @@ echo html_writer::start_tag('form', [
     'class'  => 'mb-3',
 ]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
-echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'cmid',    'value' => $cmid]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'cmid', 'value' => $cmid]);
 
 echo html_writer::start_div('aigrader-bulk-bar d-flex flex-wrap align-items-center gap-3 mb-3');
-echo html_writer::tag('label', get_string('bulk_label_with_selected', 'local_aigrader'),
-    ['for' => 'aigrader-bulk-action', 'class' => 'form-label mb-0']);
+echo html_writer::tag(
+    'label',
+    get_string('bulk_label_with_selected', 'local_aigrader'),
+    ['for' => 'aigrader-bulk-action', 'class' => 'form-label mb-0']
+);
 
 $selecthtml = html_writer::start_tag('select', [
     'name'  => 'action',
@@ -405,9 +410,11 @@ echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'cmid', 'val
 if ($filter !== '') {
     echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'filter', 'value' => $filter]);
 }
-echo html_writer::tag('label',
+echo html_writer::tag(
+    'label',
     get_string('count_perpage_label', 'local_aigrader'),
-    ['for' => 'aigrader-perpage', 'class' => 'form-label mb-0 small text-muted']);
+    ['for' => 'aigrader-perpage', 'class' => 'form-label mb-0 small text-muted']
+);
 $ppsel = html_writer::start_tag('select', [
     'name'    => 'perpage',
     'id'      => 'aigrader-perpage',

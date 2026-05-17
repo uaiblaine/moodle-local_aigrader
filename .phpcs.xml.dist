@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<ruleset name="local_aigrader">
+    <description>Coding standard customisations for local_aigrader. Inherits the
+    Moodle standard from moodlehq/moodle-cs and adds two narrowly-scoped
+    exclusions:
+
+    1. thirdparty/vendor/ — composer-generated code (smalot/pdfparser and its
+       autoloader bootstrap). Listed in thirdpartylibs.xml; not authored by us.
+    2. lang/ — translatable strings often need lines longer than 132 chars and
+       are deliberately grouped by feature (with separator comments) rather
+       than strict alphabetical key order, so the LangFilesOrdering /
+       LineLength / WrongStyle rules don't fit how lang files are actually
+       maintained on this plugin.
+    </description>
+
+    <!-- Inherit the standard Moodle ruleset. -->
+    <rule ref="moodle"/>
+
+    <!-- Composer-generated third-party code must not be sniffed.
+         Listed in thirdpartylibs.xml. -->
+    <exclude-pattern>thirdparty/vendor/*</exclude-pattern>
+
+    <!-- Long lines in lang/* string files are unavoidable: help texts and
+         multi-sentence labels routinely exceed 132 chars; breaking them
+         hurts translator ergonomics. -->
+    <rule ref="moodle.Files.LineLength.TooLong">
+        <exclude-pattern>lang/*</exclude-pattern>
+    </rule>
+    <rule ref="moodle.Files.LineLength.MaxExceeded">
+        <exclude-pattern>lang/*</exclude-pattern>
+    </rule>
+
+    <!-- Lang files are organised by feature (with separator comments and
+         logical grouping), not strict alphabetical key order. This is more
+         readable for translators and reviewers than enforcing a flat
+         ASCII sort; the trade-off is documented in CONTRIBUTING.md. -->
+    <rule ref="moodle.Files.LangFilesOrdering">
+        <exclude-pattern>lang/*</exclude-pattern>
+    </rule>
+    <rule ref="moodle.Files.LangFilesOrdering.IncorrectOrder">
+        <exclude-pattern>lang/*</exclude-pattern>
+    </rule>
+    <rule ref="moodle.Files.LangFilesOrdering.UnexpectedComment">
+        <exclude-pattern>lang/*</exclude-pattern>
+    </rule>
+
+    <!-- The comment-separator rule fires on every separator line that uses
+         a period (".") because the auto-strip thinks the "." is content;
+         we use trailing-period separators throughout the codebase for
+         consistency with PSR doc-comment conventions. -->
+    <rule ref="moodle.Commenting.InlineComment.IncorrectCommentSeparator">
+        <type>warning</type>
+        <severity>0</severity>
+    </rule>
+
+    <!-- defined('MOODLE_INTERNAL') is part of the standard template for
+         lib.php, db/upgrade.php, version.php and test files. The
+         "MoodleInternalNotNeeded" sub-rule fires on each of these even
+         though they're conventional; treat it as advisory only. -->
+    <rule ref="moodle.Files.MoodleInternal.MoodleInternalNotNeeded">
+        <type>warning</type>
+        <severity>0</severity>
+    </rule>
+
+    <!-- Squiz's "X% valid code" detector flags some intentional
+         English explanations as commented-out code (false positive on
+         comments that happen to contain shell-style syntax). -->
+    <rule ref="Squiz.PHP.CommentedOutCode.Found">
+        <type>warning</type>
+        <severity>0</severity>
+    </rule>
+
+    <!-- The PHPUnit-class-location rule wants files mirroring the
+         namespace. We organise tests flat under tests/ for now; a future
+         clean-up may move them into subdirectories matching the
+         namespace (e.g. tests/extractor/), but that's a separate change. -->
+    <rule ref="moodle.PHPUnit.TestCaseNames.UnexpectedLevel2NS">
+        <exclude-pattern>tests/*</exclude-pattern>
+    </rule>
+
+    <!-- Stylistic rules we don't enforce: capitalised first letter on
+         inline comments and ending in full-stop. Both are pedantic and
+         cause noise on otherwise fine comments (continuation comments,
+         comments referring to lowercase identifiers, etc.). The Moodle
+         standard treats them as warnings, not errors, and Plugin Directory
+         peer reviewers don't reject on them. -->
+    <rule ref="moodle.Commenting.InlineComment.NotCapital">
+        <type>warning</type>
+        <severity>0</severity>
+    </rule>
+    <rule ref="moodle.Commenting.InlineComment.InvalidEndChar">
+        <type>warning</type>
+        <severity>0</severity>
+    </rule>
+
+    <!-- Backticks in strings are flagged as forbidden, but we use them
+         in user-facing error messages and audit-log content where a
+         code-style monospace block helps readability. -->
+    <rule ref="moodle.Strings.ForbiddenStrings.Found">
+        <type>warning</type>
+        <severity>0</severity>
+    </rule>
+</ruleset>

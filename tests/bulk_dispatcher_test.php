@@ -42,8 +42,7 @@ defined('MOODLE_INTERNAL') || die();
  *
  * @covers \local_aigrader\bulk\dispatcher
  */
-class bulk_dispatcher_test extends \basic_testcase {
-
+final class bulk_dispatcher_test extends \basic_testcase {
     /**
      * Tiny helper: build the minimal row shape that classify() reads.
      */

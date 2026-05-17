@@ -61,9 +61,18 @@ use stdClass;
  * Manage page table for AI Grader Pro.
  */
 class manage_table extends \table_sql {
-    /** Course module id; needed for action URLs (Revisar, Calificar con IA). */
+    /**
+     * Course module id; needed for action URLs (Revisar, Calificar con IA).
+     *
+     * @var int
+     */
     private int $cmid;
 
+    /**
+     * Build the manage page table bound to a specific assignment by its cmid.
+     *
+     * @param int $cmid Course module id of the assignment being managed.
+     */
     public function __construct(int $cmid) {
         parent::__construct('local-aigrader-manage');
         $this->cmid = $cmid;
@@ -78,11 +87,11 @@ class manage_table extends \table_sql {
                 'id'         => 'aigrader-select-all',
                 'aria-label' => get_string('bulk_select_all', 'local_aigrader'),
             ]),
-            get_string('th_student',    'local_aigrader'),
-            get_string('th_submitted',  'local_aigrader'),
-            get_string('th_status',     'local_aigrader'),
-            get_string('th_grade',      'local_aigrader'),
-            get_string('th_action',     'local_aigrader'),
+            get_string('th_student', 'local_aigrader'),
+            get_string('th_submitted', 'local_aigrader'),
+            get_string('th_status', 'local_aigrader'),
+            get_string('th_grade', 'local_aigrader'),
+            get_string('th_action', 'local_aigrader'),
         ]);
 
         // Default sort: student last name ASC. Sortable columns map to SQL
@@ -133,6 +142,12 @@ class manage_table extends \table_sql {
     // Per-column renderers.
     // ---------------------------------------------------------------.
 
+    /**
+     * Render the row-selection checkbox bound to the external bulk form.
+     *
+     * @param stdClass $row Joined assign_submission + local_aigrader_submission row.
+     * @return string HTML for the cell.
+     */
     public function col_checkbox($row): string {
         $studentname = fullname($row);
         return html_writer::empty_tag('input', [
@@ -145,26 +160,56 @@ class manage_table extends \table_sql {
         ]);
     }
 
+    /**
+     * Render the student's full name.
+     *
+     * @param stdClass $row
+     * @return string
+     */
     public function col_student($row): string {
         return fullname($row);
     }
 
+    /**
+     * Render the submission time in the user's locale or a dash if unsubmitted.
+     *
+     * @param stdClass $row
+     * @return string
+     */
     public function col_submitted_at($row): string {
         return $row->submitted_at
             ? userdate($row->submitted_at, get_string('strftimedatetimeshort'))
             : '-';
     }
 
+    /**
+     * Render the AI grading status badge + error context if any.
+     *
+     * @param stdClass $row
+     * @return string
+     */
     public function col_status($row): string {
         return self::render_status($row->ai_status, $row->error_message);
     }
 
+    /**
+     * Render the proposed grade (or final grade for published rows).
+     *
+     * @param stdClass $row
+     * @return string
+     */
     public function col_grade($row): string {
         return $row->proposed_grade !== null
             ? format_float($row->proposed_grade, 2) . ' / 10'
             : '-';
     }
 
+    /**
+     * Render the action cell — Revisar / Calificar con IA buttons depending on state.
+     *
+     * @param stdClass $row
+     * @return string
+     */
     public function col_action($row): string {
         global $PAGE;
 
@@ -201,8 +246,8 @@ class manage_table extends \table_sql {
             'action' => $formurl->out(false),
             'style'  => 'display:inline;',
         ]);
-        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey',      'value' => sesskey()]);
-        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',       'value' => 'enqueue']);
+        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'enqueue']);
         $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'submissionid', 'value' => $row->submissionid]);
 
         $isprimaryforrow = ($row->ai_status === null);
@@ -235,8 +280,10 @@ class manage_table extends \table_sql {
      */
     public static function render_status(?string $status, ?string $errormsg): string {
         if ($status === null) {
-            return html_writer::span(get_string('status_none', 'local_aigrader'),
-                'badge bg-secondary text-white');
+            return html_writer::span(
+                get_string('status_none', 'local_aigrader'),
+                'badge bg-secondary text-white'
+            );
         }
         switch ($status) {
             case 'pending_ai':
@@ -244,32 +291,44 @@ class manage_table extends \table_sql {
                 // flight. Keep it subtle so the teacher doesn't read it as
                 // "another item to act on" — the auto-refresh polling notice
                 // above the table is the right place to surface the activity.
-                return html_writer::span(get_string('status_pending', 'local_aigrader'),
-                    'badge bg-light text-dark');
+                return html_writer::span(
+                    get_string('status_pending', 'local_aigrader'),
+                    'badge bg-light text-dark'
+                );
             case 'ai_proposed':
                 // bg-info (cyan) is "informational: there is a proposal
                 // waiting for you to review". Distinct from bg-success which
                 // is reserved for 'published' (final, in gradebook). v1.0.14
                 // had both ai_proposed and published in green, which the
                 // pilot teacher correctly flagged as confusing.
-                return html_writer::span(get_string('status_proposed', 'local_aigrader'),
-                    'badge bg-info text-white');
+                return html_writer::span(
+                    get_string('status_proposed', 'local_aigrader'),
+                    'badge bg-info text-white'
+                );
             case 'teacher_reviewed':
-                return html_writer::span(get_string('status_reviewed', 'local_aigrader'),
-                    'badge bg-primary text-white');
+                return html_writer::span(
+                    get_string('status_reviewed', 'local_aigrader'),
+                    'badge bg-primary text-white'
+                );
             case 'published':
-                return html_writer::span(get_string('status_published', 'local_aigrader'),
-                    'badge bg-success text-white');
+                return html_writer::span(
+                    get_string('status_published', 'local_aigrader'),
+                    'badge bg-success text-white'
+                );
             case 'error':
-                $badge = html_writer::span(get_string('status_error', 'local_aigrader'),
-                    'badge bg-danger text-white');
+                $badge = html_writer::span(
+                    get_string('status_error', 'local_aigrader'),
+                    'badge bg-danger text-white'
+                );
                 if ($errormsg) {
                     $badge .= self::info_icon(error_classifier::summarize_raw($errormsg));
                 }
                 return $badge;
             case 'unsupported_format':
-                $badge = html_writer::span(get_string('status_unsupported', 'local_aigrader'),
-                    'badge bg-warning text-dark');
+                $badge = html_writer::span(
+                    get_string('status_unsupported', 'local_aigrader'),
+                    'badge bg-warning text-dark'
+                );
                 if ($errormsg) {
                     $badge .= self::info_icon($errormsg);
                 }

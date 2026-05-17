@@ -38,7 +38,7 @@ require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
 use local_aigrader\bulk\dispatcher;
 
-$cmid    = required_param('cmid',   PARAM_INT);
+$cmid    = required_param('cmid', PARAM_INT);
 $action  = required_param('action', PARAM_ALPHANUMEXT);
 $ids     = optional_param_array('ids', [], PARAM_INT);
 $confirm = optional_param('confirm', 0, PARAM_BOOL);
@@ -131,8 +131,8 @@ if ($isdestructive && !$confirm) {
 
     $hiddeninputs = [
         ['name' => 'sesskey', 'value' => sesskey()],
-        ['name' => 'cmid',    'value' => $cmid],
-        ['name' => 'action',  'value' => $action],
+        ['name' => 'cmid', 'value' => $cmid],
+        ['name' => 'action', 'value' => $action],
         ['name' => 'confirm', 'value' => 1],
     ];
     foreach ($ids as $sid) {

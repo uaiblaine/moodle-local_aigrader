@@ -47,7 +47,10 @@ use core_privacy\local\request\writer;
 /**
  * Class provider.
  */
-class provider implements \core_privacy\local\metadata\provider, \core_privacy\local\request\core_userlist_provider, \core_privacy\local\request\plugin\provider {
+class provider implements
+    \core_privacy\local\metadata\provider,
+    \core_privacy\local\request\core_userlist_provider,
+    \core_privacy\local\request\plugin\provider {
     // ---------------------------------------------------------------------.
     // Metadata\provider — declare what we store.
     // ---------------------------------------------------------------------.
@@ -339,8 +342,11 @@ class provider implements \core_privacy\local\metadata\provider, \core_privacy\l
             foreach ($rows as $r) {
                 $isteacher = ((int) $r->userid === $userid);
                 $isstudent = ((int) $r->studentid === $userid);
+                $rolelabel = ($isstudent ? 'student' : '')
+                    . ($isstudent && $isteacher ? '+' : '')
+                    . ($isteacher ? 'teacher' : '');
                 $data = (object) [
-                    'role'           => ($isstudent ? 'student' : '') . ($isstudent && $isteacher ? '+' : '') . ($isteacher ? 'teacher' : ''),
+                    'role'           => $rolelabel,
                     'action'         => $r->action,
                     'llm_provider'   => $r->llm_provider,
                     'llm_model'      => $r->llm_model,

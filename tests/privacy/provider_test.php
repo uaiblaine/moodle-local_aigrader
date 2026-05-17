@@ -122,7 +122,12 @@ final class provider_test extends \advanced_testcase {
             'studentid'         => $this->student->id,
             'status'            => 'ai_proposed',
             'proposed_grade'    => 7.5,
-            'proposed_feedback' => '{"final_grade":7.5,"strengths":["clear thesis"],"improvements":["add sources"],"justification":"Good basic structure."}',
+            'proposed_feedback' => json_encode([
+                'final_grade'   => 7.5,
+                'strengths'     => ['clear thesis'],
+                'improvements'  => ['add sources'],
+                'justification' => 'Good basic structure.',
+            ]),
             'timecreated'       => $now,
             'timemodified'      => $now,
             'timeprocessed'     => $now,

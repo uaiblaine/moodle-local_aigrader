@@ -54,12 +54,12 @@ $proposalrow = $DB->get_record(
 );
 
 // Allowed statuses:
-//   ai_proposed / teacher_reviewed / published — there is a proposal to review.
-//   unsupported_format / error                — there is NO proposal because the
-//     AI could not process the submission, but the teacher should still be
-//     able to grade manually here (same UI, same save_grade path) without
-//     having to go to Moodle's native grader. The form renders with empty
-//     defaults; nothing is pre-filled.
+// ai_proposed / teacher_reviewed / published — there is a proposal to review.
+// unsupported_format / error                — there is NO proposal because the
+// AI could not process the submission, but the teacher should still be
+// able to grade manually here (same UI, same save_grade path) without
+// having to go to Moodle's native grader. The form renders with empty
+// defaults; nothing is pre-filled.
 $manualfallbackstatuses = ['unsupported_format', 'error'];
 $allowedstatuses = array_merge(
     ['ai_proposed', 'teacher_reviewed', 'published'],
@@ -486,7 +486,12 @@ echo html_writer::end_div();
 
 // Justification.
 echo html_writer::start_div('mb-3');
-echo html_writer::label(get_string('field_justification', 'local_aigrader'), 'finaljustification', false, ['class' => 'form-label']);
+echo html_writer::label(
+    get_string('field_justification', 'local_aigrader'),
+    'finaljustification',
+    false,
+    ['class' => 'form-label']
+);
 echo html_writer::tag(
     'textarea',
     s($current['justification'] ?? ''),

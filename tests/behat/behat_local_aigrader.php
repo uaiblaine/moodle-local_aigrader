@@ -37,7 +37,6 @@ use Behat\Gherkin\Node\TableNode;
  * Step definitions for AI Grader Pro Behat scenarios.
  */
 class behat_local_aigrader extends behat_base {
-
     /**
      * Enable AI Grader Pro on an existing assignment, optionally with custom criteria.
      *

@@ -83,21 +83,24 @@ $mgr    = new \local_aigrader\manager();
 $result = $mgr->grade_submission($submissionid);
 
 if ($result->success) {
-    redirect($redirecturl,
+    redirect(
+        $redirecturl,
         get_string('msg_graded_now', 'local_aigrader'),
         null,
         \core\output\notification::NOTIFY_SUCCESS
     );
 }
 if (!empty($result->needs_review)) {
-    redirect($redirecturl,
+    redirect(
+        $redirecturl,
         get_string('msg_needs_manual_review', 'local_aigrader'),
         null,
         \core\output\notification::NOTIFY_WARNING
     );
 }
 $classified = \local_aigrader\error_classifier::classify((string) $result->error);
-redirect($redirecturl,
+redirect(
+    $redirecturl,
     get_string($classified->headline_string_key(), 'local_aigrader'),
     null,
     \core\output\notification::NOTIFY_ERROR

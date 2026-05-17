@@ -260,7 +260,13 @@ class dispatcher implements extractor_interface {
      * @param string $codelang Optional code-language tag for the header.
      * @return array{header:string,text:string,format:string,warnings:string[]}|null
      */
-    private static function wrap_simple(string $filename, string $text, string $format, array $warnings, string $codelang = ''): ?array {
+    private static function wrap_simple(
+        string $filename,
+        string $text,
+        string $format,
+        array $warnings,
+        string $codelang = ''
+    ): ?array {
         $text = self::normalise_encoding($text);
         if (trim($text) === '') {
             return null;

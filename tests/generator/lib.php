@@ -47,7 +47,6 @@ defined('MOODLE_INTERNAL') || die();
  * generator-loader convention — don't rename it.
  */
 class local_aigrader_generator extends component_generator_base {
-
     /** Default evaluation criteria used when the caller doesn't pass any. */
     private const DEFAULT_CRITERIA = "Evaluate clarity of thesis, structure and academic language.";
 
@@ -201,8 +200,10 @@ class local_aigrader_generator extends component_generator_base {
         // Final_grader defaults to a teacher of the course (or admin) when
         // status implies teacher action; lets the privacy export queries
         // find a userid to attribute the action to.
-        if (in_array($record->status, ['teacher_reviewed', 'published'], true)
-            && empty($record->final_grader)) {
+        if (
+            in_array($record->status, ['teacher_reviewed', 'published'], true)
+            && empty($record->final_grader)
+        ) {
             $record->final_grader = $this->guess_grader_userid($cm);
         }
 

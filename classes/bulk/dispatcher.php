@@ -139,8 +139,10 @@ class dispatcher {
                 // published row re-runs the LLM but does NOT touch the
                 // gradebook — the new proposal sits in ai_proposed waiting
                 // for the teacher to publish (or re-publish) it.
-                if ($status === null
-                    || in_array($status, ['ai_proposed', 'teacher_reviewed', 'published', 'error'], true)) {
+                if (
+                    $status === null
+                    || in_array($status, ['ai_proposed', 'teacher_reviewed', 'published', 'error'], true)
+                ) {
                     return self::RESULT_OK;
                 }
                 if ($status === 'pending_ai') {
@@ -167,13 +169,11 @@ class dispatcher {
      *                          caller has already filtered; we just trust the
      *                          map and re-validate inside the per-row branch.
      * @param int|null $synclimit Override SYNC_LIMIT for tests. Null = default.
-     * @return array {
-     *     @type int   ok        Number of rows the action ran on.
-     *     @type int   queued    Number of rows enqueued as adhoc tasks (>= 0).
-     *     @type int   skipped   Number of rows the action did NOT touch.
-     *     @type array errors    [submissionid => error message string]
-     *     @type array skip_reasons [reason_key => count] for the summary banner.
-     * }
+     * @return array Result tally with keys: ok (int rows the action ran on),
+     *               queued (int rows enqueued as adhoc tasks, >= 0),
+     *               skipped (int rows the action did NOT touch),
+     *               errors (array<int, string> submissionid => error message),
+     *               skip_reasons (array<string, int> reason_key => count for the summary banner).
      */
     public static function execute(string $action, array $rows, array $applicable, ?int $synclimit = null): array {
         global $USER;
@@ -299,7 +299,7 @@ class dispatcher {
         $justification = (string) ($proposed['justification'] ?? '');
 
         // 1. Update local_aigrader_submission to 'published' with final_feedback
-        //    matching the proposal (no edits).
+        // matching the proposal (no edits).
         $finalfeedback = array_merge($proposed, [
             'final_grade' => round($finalgrade, 2),
         ]);
