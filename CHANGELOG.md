@@ -5,6 +5,66 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.17-beta] — 2026-05-17
+
+### Added
+
+- **Three new language packs:**
+    - `lang/pt_br/local_aigrader.php` — Brazilian Portuguese.
+      Highest-leverage target for the LATAM go-to-market — Brazil
+      has one of the world's largest Moodle deployments.
+    - `lang/ca/local_aigrader.php` — Catalan. Differentiator for
+      Catalan universities (UPC, UB, UAB, UPF, UOC) — the bulk of
+      Moodle plugins ship only es+en.
+    - `lang/fr/local_aigrader.php` — French. Covers EU and
+      Canadian francophone academic deployments; aligns well with
+      AI Act compliance markets.
+
+  All three are full parity translations (194 keys each, same as
+  es/en). Multi-line help text (form_criteria_help with its
+  example rubric) localised including the example. Placeholders
+  (`{$a}`, `{$a->subkey}`) preserved unchanged.
+
+### Translation register notes
+
+- pt_br uses the academic register (Brazilian conventions: "tarefa"
+  for assignment, "envio" for submission, "livro de notas" for
+  gradebook).
+- ca uses formal academic Catalan ("tasca", "lliurament", "quadern
+  de qualificacions"). Avoids loanwords from Spanish where possible.
+- fr uses formal academic register ("devoir", "remise", "carnet de
+  notes"), with European French (not Canadian variants).
+
+### Verification
+
+- `php` diff across all five languages (es / en / pt_br / ca / fr):
+  194 strings each, 0 missing, 0 extras vs es reference.
+- `php -l` syntax check passes on all three new files.
+- Live render in browser with `?lang=` URL override:
+    - pt_br: counter chips render as "8 com proposta IA / 2 revisadas /
+      2 publicadas / 1 com problemas / 0 sem avaliação por IA". Bulk
+      label "Com selecionadas:". Badges in pt_br.
+    - ca: counter chips "8 amb proposta IA / 2 revisades / 2 publicades
+      / 1 amb problemes / 0 sense qualificar amb IA". Bulk label "Amb
+      seleccionades:". Badges in ca.
+    - fr: counter chips "8 avec proposition IA / 2 révisées / 2 publiées
+      / 1 avec problèmes / 0 sans évaluation IA". Bulk label "Avec les
+      sélectionnées :". Badges in fr.
+  No `[[missing_key]]` placeholders shown in any of the three.
+
+### Notes
+
+- The English text inside the LLM prompt itself (file headers, the
+  "[This file could not be processed...]" placeholder in
+  dispatcher::unsupported()) is intentionally NOT localised — the
+  LLM benefits from English instruction markers in its
+  instruction-following training and never reads the teacher's UI
+  strings.
+- The Moodle Plugin Directory community routinely contributes
+  additional translations once a plugin is published. v1.0.17
+  bootstraps the most strategically important three; future langs
+  can land via AMOS without our plugin needing to change.
+
 ## [v1.0.16-beta] — 2026-05-17
 
 ### Changed
