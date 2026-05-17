@@ -129,7 +129,7 @@ $string['field_improvements']       = 'Mejorables';
 $string['field_improvements_hint']  = 'Uno por linea. Sugerencias constructivas que vera el alumno.';
 $string['field_justification']      = 'Justificación (visible para el alumno)';
 
-$string['btn_review']          = 'Revisar →';
+$string['btn_review']          = 'Revisar';
 $string['btn_view_published']  = 'Ver ✓';
 $string['btn_approve_publish'] = 'Aprobar y publicar';
 $string['btn_reject']          = 'Rechazar (calificar manualmente)';
@@ -248,7 +248,7 @@ $string['bulk_select_row']          = 'Seleccionar entrega de {$a}';
 
 // Opciones del selector.
 $string['bulk_action_choose']          = '-- Elige una acción --';
-$string['bulk_action_approve_publish'] = 'Publicar nota propuesta tal cual';
+$string['bulk_action_approve_publish'] = 'Publicar nota propuesta';
 $string['bulk_action_grade_ai']        = 'Calificar con IA';
 
 // Advertencias mostradas en la pantalla de confirmación.

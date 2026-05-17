@@ -129,7 +129,7 @@ $string['field_improvements']       = 'Improvements';
 $string['field_improvements_hint']  = 'One per line. Constructive suggestions shown to the student.';
 $string['field_justification']      = 'Justification (visible to the student)';
 
-$string['btn_review']          = 'Review →';
+$string['btn_review']          = 'Review';
 $string['btn_view_published']  = 'View ✓';
 $string['btn_approve_publish'] = 'Approve and publish';
 $string['btn_reject']          = 'Reject (grade manually)';
@@ -248,7 +248,7 @@ $string['bulk_select_row']          = 'Select submission by {$a}';
 
 // Dropdown options.
 $string['bulk_action_choose']          = '-- Choose an action --';
-$string['bulk_action_approve_publish'] = 'Publish proposed grade as-is';
+$string['bulk_action_approve_publish'] = 'Publish proposed grade';
 $string['bulk_action_grade_ai']        = 'Grade with AI';
 
 // Confirmation warnings.

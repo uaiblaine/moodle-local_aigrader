@@ -5,6 +5,27 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.11-beta] — 2026-05-17
+
+### Changed
+
+- **Bulk action label** in the "Con seleccionadas..." dropdown:
+  `'Publicar nota propuesta tal cual'` → `'Publicar nota propuesta'`
+  (en: `'Publish proposed grade as-is'` → `'Publish proposed grade'`).
+  The "tal cual" / "as-is" qualifier was redundant — every bulk
+  publish action by definition publishes whatever the AI proposed
+  unchanged (if the teacher wanted to edit they would use Revisar
+  on the row). Removing it shortens the dropdown and makes the
+  action read more naturally. The intermediate confirmation page
+  warning still mentions "sin editar" so the implication is
+  preserved where it matters most.
+- **Per-row "Revisar →" button label** in the action column:
+  `'Revisar →'` → `'Revisar'` (en: `'Review →'` → `'Review'`). The
+  trailing arrow was decorative leftover from an early sketch; it
+  didn't carry any "this navigates somewhere" semantic that the
+  surrounding link styling and the button shape don't already
+  communicate. Drops noise from the action column.
+
 ## [v1.0.10-beta] — 2026-05-17
 
 ### Changed

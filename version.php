@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051705;           // YYYYMMDDXX. v1.0.10: drop misleading "openai" provider tag from the review.php meta-info string; show only the model name.
+$plugin->version   = 2026051706;           // YYYYMMDDXX. v1.0.11: drop "tal cual" from the bulk publish action label; drop the trailing arrow from the per-row "Revisar" button.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.10-beta';
+$plugin->release   = 'v1.0.11-beta';
