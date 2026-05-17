@@ -5,6 +5,40 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.13-beta] — 2026-05-17
+
+### Added
+
+- **Microcopy under the "Entrega tal y como la vio la IA"
+  disclosure** in `review.php`. The section showed a raw `<pre>` with
+  the LLM's input text but no explanation of what it was for; pilot
+  feedback described it as "wall of text without explanation". Three
+  new pieces of content render inside the `<details>` block:
+    1. A plain-language paragraph explaining what the section is and
+       when the teacher would consult it. Kept deliberately short:
+       earlier drafts mentioned head/tail truncation of long cells
+       but the pilot review pushed back on the jargon and on the
+       extra sentence in general, so the final copy only flags that
+       "some formats are not processed (very large PDFs, images)".
+    2. A one-line metadata note "{X.X} KB de texto extraídos." so the
+       teacher can sanity-check at a glance whether the AI actually
+       received a meaningful chunk of the submission.
+    3. The extraction warnings (skipped files, truncations) now render
+       under a labelled "Avisos sobre la extracción:" sub-heading as
+       a bulleted list. Previously they emitted as anonymous muted
+       divs after the `<pre>` and were easy to miss.
+
+  All three render in the happy path (`$extraction->is_ok()`). For
+  the `needs_review` / `error` path the microcopy still shows; the
+  size and warnings header are suppressed because the underlying
+  error message already contains the full reason (showing it twice
+  would be redundant).
+
+### Lang strings
+
+- ES + EN added: `review_seen_by_ai_help`, `review_seen_by_ai_size`,
+  `review_seen_by_ai_warnings`.
+
 ## [v1.0.12-beta] — 2026-05-17
 
 ### Changed

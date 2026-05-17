@@ -309,7 +309,28 @@ echo html_writer::tag(
     ['style' => 'cursor: pointer; user-select: none;']
 );
 echo html_writer::start_div('mt-2');
+
+// Microcopy explaining what this section is for. Pilot feedback in
+// v1.0.12 review noted that opening the section without context felt
+// like "wall of text without explanation". The paragraph is plain
+// language, no jargon ("head + tail" was rejected as too technical;
+// "se conservan sólo el principio y el final" is the safer phrasing).
+echo html_writer::tag(
+    'p',
+    get_string('review_seen_by_ai_help', 'local_aigrader'),
+    ['class' => 'small text-muted mb-2']
+);
+
 if ($extraction->is_ok()) {
+    // Tiny metadata line: size of extracted text. Helps the teacher
+    // sanity-check "did the AI receive a meaningful chunk of work?".
+    $sizekb = number_format(mb_strlen($extraction->text) / 1024, 1);
+    echo html_writer::tag(
+        'p',
+        get_string('review_seen_by_ai_size', 'local_aigrader', $sizekb),
+        ['class' => 'small text-muted mb-2']
+    );
+
     echo html_writer::tag(
         'pre',
         s($extraction->text),
@@ -317,10 +338,21 @@ if ($extraction->is_ok()) {
                   . 'font-family: monospace; font-size: 0.85rem; '
                   . 'background: #f6f8fa; padding: 0.75rem; border-radius: 4px;']
     );
+
+    // Warnings (skipped files, truncations) used to render as anonymous
+    // muted divs after the pre — easy to miss. Group them under a
+    // labelled sub-heading so the teacher knows what they mean.
     if (!empty($extraction->warnings)) {
+        echo html_writer::tag(
+            'p',
+            get_string('review_seen_by_ai_warnings', 'local_aigrader'),
+            ['class' => 'small fw-semibold text-muted mt-3 mb-1']
+        );
+        echo html_writer::start_tag('ul', ['class' => 'small text-muted mb-0']);
         foreach ($extraction->warnings as $w) {
-            echo html_writer::div(s($w), 'small text-muted mt-1');
+            echo html_writer::tag('li', s($w));
         }
+        echo html_writer::end_tag('ul');
     }
 } else {
     echo html_writer::div(s($extraction->error ?? '(no text)'), 'text-muted');

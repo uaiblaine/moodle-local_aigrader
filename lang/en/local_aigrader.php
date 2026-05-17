@@ -121,6 +121,9 @@ $string['manualfallback_banner']  = 'AI grading was not available for this submi
 $string['manualfallback_default'] = 'no AI proposal recorded for this submission.';
 $string['review_submission_files']        = 'Attached files';
 $string['review_submission_seen_by_ai']   = 'Submission as seen by the AI';
+$string['review_seen_by_ai_help']         = 'This is the version of the student\'s file the AI read. If the AI proposal says something odd, check here what text it actually received. Some formats are not processed (very large PDFs, images).';
+$string['review_seen_by_ai_size']         = '{$a} KB of text extracted.';
+$string['review_seen_by_ai_warnings']     = 'Notes about the extraction:';
 
 $string['field_finalgrade']         = 'Final grade (0-10)';
 $string['field_strengths']          = 'Strengths';

@@ -121,6 +121,9 @@ $string['manualfallback_banner']  = 'La calificación con IA no estuvo disponibl
 $string['manualfallback_default'] = 'no hay propuesta IA registrada para esta entrega.';
 $string['review_submission_files']        = 'Ficheros adjuntos';
 $string['review_submission_seen_by_ai']   = 'Entrega tal y como la vio la IA';
+$string['review_seen_by_ai_help']         = 'Esta es la versión que la IA leyó del archivo del alumno. Si la propuesta IA dice algo extraño, comprueba aquí qué texto recibió realmente. Algunos formatos no se procesan (PDFs muy grandes, imágenes).';
+$string['review_seen_by_ai_size']         = '{$a} KB de texto extraídos.';
+$string['review_seen_by_ai_warnings']     = 'Avisos sobre la extracción:';
 
 $string['field_finalgrade']         = 'Nota final (0-10)';
 $string['field_strengths']          = 'Aciertos';

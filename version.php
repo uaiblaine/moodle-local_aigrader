@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051707;           // YYYYMMDDXX. v1.0.12: humanise the criterion-score slug labels in review.php (snake_case to Title Case with spaces).
+$plugin->version   = 2026051708;           // YYYYMMDDXX. v1.0.13: microcopy + extracted-text size + structured warnings under the "Entrega tal y como la vio la IA" disclosure on review.php.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.12-beta';
+$plugin->release   = 'v1.0.13-beta';
