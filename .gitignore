@@ -35,3 +35,18 @@ coverage/
 *.log
 *.tmp
 *.bak
+
+# Scripts de demo / setup local (no son parte del plugin).
+# Sirven para seed-ear nuestro entorno de desarrollo: cursos de prueba,
+# batches de calificación con datos reales de pilotos, retries, etc.
+# No tienen valor fuera de nuestro Docker de dev; mantenerlos fuera del
+# repo evita confusión a quien clone el plugin desde el Moodle Plugin
+# Directory.
+cli/batch_test_real_practicas.php
+cli/batch_test_retries.php
+cli/seed_test_course.php
+cli/update_practica_final.php
+
+# Assets sólo del demo AcademIA · Microcredencial (iconos SVG del homepage
+# heroico, slider, etc.). No los usa el plugin en tiempo de ejecución.
+demo_assets/
