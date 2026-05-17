@@ -16,16 +16,19 @@ safety net → setup → transparency) with intentional progression.
 2. Log in as `prof_demo` and use the Práctica Final course
    (`MICRO-IA-DEMO` or `IA-MC-PY` cmid=5 in our reference dev DB).
 3. For each screenshot below: open the URL, follow the
-   "framing" instructions, save the PNG to this folder with the
+   "framing" instructions, save the image to this folder with the
    filename specified.
 
-PNG width should be **1568 px** (Moodle Plugin Directory's
-recommended viewport for desktop screenshots). 16:9 or 16:10 aspect
-ratio works well — the Directory thumbnails crop centred.
+Screenshots are stored as **JPEG** (`.jpg`) — the Moodle Plugin
+Directory accepts both JPEG and PNG, and JPEG keeps the file size
+under 100 KB per image while preserving readable text at the
+listing's display resolution. Image width should be **1568 px**
+(the desktop viewport size used when capturing); the Directory
+crops thumbnails centred to 16:9.
 
 ## Screenshot 1 — Hero / manage page overview
 
-**File**: `01-manage-overview.png`
+**File**: `01-manage-overview.jpg`
 
 **URL**: `/local/aigrader/manage.php?cmid=<cmid>` (with at least 6-8
 submissions of mixed status — `ai_proposed`, `published`,
@@ -49,7 +52,7 @@ fictional cohort names should be readable in the Alumno column.
 
 ## Screenshot 2 — Review form (HITL gate)
 
-**File**: `02-review-form.png`
+**File**: `02-review-form.jpg`
 
 **URL**: `/local/aigrader/review.php?submissionid=<id>` for any
 submission in `ai_proposed` state.
@@ -68,7 +71,7 @@ textarea with bullets, and the start of the Mejorables textarea.
 
 ## Screenshot 3 — Bulk action confirmation
 
-**File**: `03-bulk-confirm.png`
+**File**: `03-bulk-confirm.jpg`
 
 **URL**: triggered from `manage.php` — select 2-3 rows in mixed
 states (so the skip summary has something to show), choose
@@ -89,7 +92,7 @@ the "Sí, publicar" / "Cancelar" buttons.
 
 ## Screenshot 4 — Per-assignment configuration
 
-**File**: `04-assignment-config.png`
+**File**: `04-assignment-config.jpg`
 
 **URL**: `/course/modedit.php?update=<cmid>` for an assignment
 where AI Grader Pro is already enabled.
@@ -110,7 +113,7 @@ and the Save buttons.
 
 ## Screenshot 5 — Transparency: submission as seen by the AI
 
-**File**: `05-seen-by-ai.png`
+**File**: `05-seen-by-ai.jpg`
 
 **URL**: same as Screenshot 2 — `/local/aigrader/review.php?submissionid=<id>`.
 
@@ -131,11 +134,11 @@ line, the `<pre>` block with the extracted text, and the start of
 
 | File | Purpose |
 |---|---|
-| `01-manage-overview.png` | hero shot |
-| `02-review-form.png` | HITL editing surface |
-| `03-bulk-confirm.png` | safety confirmation |
-| `04-assignment-config.png` | configuration |
-| `05-seen-by-ai.png` | transparency / AI-Act |
+| `01-manage-overview.jpg` | hero shot |
+| `02-review-form.jpg` | HITL editing surface |
+| `03-bulk-confirm.jpg` | safety confirmation |
+| `04-assignment-config.jpg` | configuration |
+| `05-seen-by-ai.jpg` | transparency / AI-Act |
 
 The Moodle Plugin Directory orders screenshots by the upload
 sequence, so the `0N-` numeric prefix is for our own bookkeeping

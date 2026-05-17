@@ -5,6 +5,27 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.19-beta] — 2026-05-17
+
+### Added
+
+- **Five screenshots for the Plugin Directory listing**
+  (`docs/screenshots/01-manage-overview.jpg`
+  … `05-seen-by-ai.jpg`). 1568 px wide, JPEG, ~85 KB each. Captured
+  against a fictional cohort (María García López, Carlos Martínez
+  Ruiz, …) so no real student names appear in the public listing.
+  Filenames match the spec in
+  [docs/screenshots/README.md](docs/screenshots/README.md), so they
+  can be re-uploaded to moodle.org with stable references.
+
+### Closes
+
+- The Plugin Directory submission readiness work that started in
+  v1.0.4 and continued through v1.0.18: LICENSE, thirdpartylibs.xml,
+  Privacy provider, lang packs, TESTPLAN.md, listing copy, and now
+  screenshots. The plugin is ready to be submitted to
+  <https://moodle.org/plugins/local_aigrader>.
+
 ## [v1.0.18-beta] — 2026-05-17
 
 ### Added
