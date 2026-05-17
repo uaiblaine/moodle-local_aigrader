@@ -5,6 +5,54 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.21-beta] — 2026-05-17
+
+### Added
+
+- **Behat data generator** (`tests/generator/lib.php`) so scenarios
+  can plant `local_aigrader_assign` configs and
+  `local_aigrader_submission` rows directly in any of the six states
+  (`pending_ai`, `ai_proposed`, `teacher_reviewed`, `published`,
+  `error`, `unsupported_format`) without going through the real
+  grading pipeline. No LLM call ever happens during the test suite.
+- **Behat step library** (`tests/behat/behat_local_aigrader.php`)
+  exposing the generator as Gherkin Givens:
+  `AI Grader Pro is enabled on the "X" assignment`,
+  `the following local_aigrader submissions exist:`,
+  `I open the AI Grader Pro manage page for "X"`.
+- **`tests/behat/review_flow.feature`** — 4 scenarios: approve+publish,
+  save-without-publishing, draft→edit→publish, out-of-range grade
+  rejected. Covers the full HITL surface in `review.php`.
+- **`tests/behat/bulk_actions.feature`** — 3 scenarios: confirmation
+  page with skip summary (eligible / already-published / unsupported),
+  cancel from the confirmation card, no-rows-selected warning.
+- **`tests/behat/filter_and_pagination.feature`** — 3 scenarios:
+  counter chips show the cohort breakdown, chip-based filter narrows
+  the table, "Show all" clears the filter, per-page selector keeps
+  totals stable.
+- **`tests/behat/capability.feature`** — 3 scenarios: student
+  blocked at `manage.php`, editing teacher allowed, site manager
+  allowed without enrolment. Locks in the `local/aigrader:use`
+  capability behaviour.
+- **`docs/architecture.md`** — bird's-eye view of the plugin:
+  design constraints, state machine, endpoint-by-endpoint walkthrough,
+  grading pipeline, extractor / prompt builder / privacy provider /
+  bulk dispatcher / adhoc task internals, DB schema gloss, capability
+  model, test layout, CI matrix and the non-obvious decisions
+  reviewers tend to want to "fix" (HTML5 `form` attribute on
+  checkboxes, number_format vs format_float, plugin-shipped `gap`
+  CSS, etc.). For developers porting the plugin, ends with a
+  step-by-step "what survives a port to another LMS" section.
+
+### Notes
+
+- Existing `configure_assignment.feature` is left unchanged. Total
+  Behat coverage now spans 5 feature files / 14 scenarios.
+- The plugin's own data generator follows Moodle's standard pattern
+  (`local_aigrader_generator extends component_generator_base` at
+  `tests/generator/lib.php`); PHPUnit tests can use it too via
+  `$this->getDataGenerator()->get_plugin_generator('local_aigrader')`.
+
 ## [v1.0.20-beta] — 2026-05-17
 
 ### Added
