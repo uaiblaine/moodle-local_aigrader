@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051704;           // YYYYMMDDXX. v1.0.9: manage page paginated + sortable via \table_sql; per-cohort status counter via separate cheap GROUP BY query; Moodle-native "items per page" selector.
+$plugin->version   = 2026051705;           // YYYYMMDDXX. v1.0.10: drop misleading "openai" provider tag from the review.php meta-info string; show only the model name.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.9-beta';
+$plugin->release   = 'v1.0.10-beta';

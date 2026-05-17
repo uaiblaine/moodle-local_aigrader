@@ -429,7 +429,18 @@ echo html_writer::end_div();
 
 echo html_writer::end_tag('form');
 
-// Footer note showing meta info (provider, model, when proposed).
+// Footer note showing meta info (model, when proposed).
+//
+// We deliberately omit the provider name from the user-facing string. In
+// practice every row was logged with llm_provider = 'openai' because the
+// plugin uses Moodle 4.5's `aiprovider_openai` to speak to whatever LLM
+// endpoint the site has configured — typically Groq via its
+// openai-compatible API, sometimes the real OpenAI, sometimes a local
+// runtime. Showing "openai" was misleading without adding value; the
+// model name itself (e.g. "meta-llama/llama-4-scout-17b-16e-instruct")
+// is the actually informative bit. The provider field stays in the
+// audit log for traceability and forensic queries — only the UI string
+// changed.
 $meta = [];
 if ($proposalrow->timeprocessed) {
     $meta[] = get_string(
@@ -439,16 +450,12 @@ if ($proposalrow->timeprocessed) {
     );
 }
 $lastlog = $DB->get_record_sql(
-    'SELECT llm_provider, llm_model FROM {local_aigrader_log} ' .
+    'SELECT llm_model FROM {local_aigrader_log} ' .
     'WHERE submissionid = ? AND action = ? ORDER BY id DESC LIMIT 1',
     [$submissionid, 'grade']
 );
-if ($lastlog) {
-    $meta[] = get_string(
-        'review_proposed_by',
-        'local_aigrader',
-        ['provider' => s($lastlog->llm_provider), 'model' => s($lastlog->llm_model)]
-    );
+if ($lastlog && !empty($lastlog->llm_model)) {
+    $meta[] = get_string('review_proposed_by', 'local_aigrader', s($lastlog->llm_model));
 }
 if ($meta) {
     echo html_writer::div(implode(' · ', $meta), 'text-muted small');

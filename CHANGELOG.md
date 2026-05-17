@@ -5,6 +5,31 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.10-beta] — 2026-05-17
+
+### Changed
+
+- **`review.php` meta-info line no longer shows the provider name.**
+  Previously the footer rendered `"Propuesta hecha el … · por openai
+  (meta-llama/llama-4-scout-17b-16e-instruct)"`. The `"openai"` was
+  misleading: in practice every row was logged with `llm_provider =
+  'openai'` because the plugin uses Moodle 4.5's `aiprovider_openai`
+  to speak to whatever LLM endpoint the site has configured —
+  typically Groq via its openai-compatible API, sometimes the real
+  OpenAI, sometimes a local runtime. Showing `"openai"` added no
+  signal and confused the pilot teacher into thinking proposals
+  came from OpenAI when in fact they came from Groq's Llama-4 Scout.
+
+  Now: `"Propuesta hecha el … · por
+  meta-llama/llama-4-scout-17b-16e-instruct"`. The model slug uniquely
+  identifies the LLM family + variant, which is the actually
+  informative bit.
+
+  The provider field stays untouched in `local_aigrader_log` for
+  forensic queries and audit-log fidelity — only the user-facing
+  string changed. Lang keys `review_proposed_by` (es + en) simplified
+  from `'{$a->provider} ({$a->model})'` to `'{$a}'`.
+
 ## [v1.0.9-beta] — 2026-05-17
 
 ### Changed
