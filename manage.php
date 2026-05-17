@@ -277,8 +277,14 @@ if ($counts['problems'] > 0) {
 // -------------------------------------------------------------------.
 // Counter chips (clickable filter).
 // -------------------------------------------------------------------.
+// Chip colours map 1:1 to the badge colours in manage_table::render_status
+// so the teacher gets the same visual cue in the filter and in the table.
+// v1.0.15 split ai_proposed off bg-success (which was shared with
+// published) — having "waiting for your review" and "already in the
+// gradebook" both in green was confusing. ai_proposed now uses bg-info
+// (cyan = "there is information for you to act on").
 $chipdefs = [
-    'ai_proposed'      => ['label' => 'count_ai_proposed',      'class' => 'bg-success text-white'],
+    'ai_proposed'      => ['label' => 'count_ai_proposed',      'class' => 'bg-info text-white'],
     'teacher_reviewed' => ['label' => 'count_teacher_reviewed', 'class' => 'bg-primary text-white'],
     'published'        => ['label' => 'count_published',        'class' => 'bg-success text-white'],
     'problems'         => ['label' => 'count_problems',         'class' => 'bg-warning text-dark'],

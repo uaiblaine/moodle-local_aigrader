@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051709;           // YYYYMMDDXX. v1.0.14: own styles.css forces the manage-page gap rules — the Moove theme didn't ship Bootstrap's gap-* utility classes so the chip+bulk+perpage bars rendered with 0 gap.
+$plugin->version   = 2026051710;           // YYYYMMDDXX. v1.0.15: distinguish 'ai_proposed' (cyan) from 'published' (green) — previously both used bg-success which was visually confusing.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.14-beta';
+$plugin->release   = 'v1.0.15-beta';

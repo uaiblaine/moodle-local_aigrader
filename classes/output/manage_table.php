@@ -240,11 +240,20 @@ class manage_table extends \table_sql {
         }
         switch ($status) {
             case 'pending_ai':
+                // Transient state (a few seconds) while the LLM call is in
+                // flight. Keep it subtle so the teacher doesn't read it as
+                // "another item to act on" — the auto-refresh polling notice
+                // above the table is the right place to surface the activity.
                 return html_writer::span(get_string('status_pending', 'local_aigrader'),
-                    'badge bg-info text-white');
+                    'badge bg-light text-dark');
             case 'ai_proposed':
+                // bg-info (cyan) is "informational: there is a proposal
+                // waiting for you to review". Distinct from bg-success which
+                // is reserved for 'published' (final, in gradebook). v1.0.14
+                // had both ai_proposed and published in green, which the
+                // pilot teacher correctly flagged as confusing.
                 return html_writer::span(get_string('status_proposed', 'local_aigrader'),
-                    'badge bg-success text-white');
+                    'badge bg-info text-white');
             case 'teacher_reviewed':
                 return html_writer::span(get_string('status_reviewed', 'local_aigrader'),
                     'badge bg-primary text-white');

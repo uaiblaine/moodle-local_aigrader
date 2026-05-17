@@ -5,6 +5,36 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.15-beta] — 2026-05-17
+
+### Fixed
+
+- **`ai_proposed` and `published` no longer share the same colour.**
+  Both states rendered with `bg-success` (green) in the counter chips
+  and table badges since v1.0.6. The pilot teacher correctly flagged
+  this as confusing: semantically the two states are opposites —
+  "there is a proposal waiting for you to review and act on" vs
+  "this row is done and locked in the gradebook" — and giving them
+  the same visual cue meant the teacher had to read each chip label
+  to tell them apart.
+
+  `ai_proposed` now uses `bg-info` (cyan in Moove's resolved palette,
+  `rgb(0, 129, 150)`) — "informational, a proposal awaits review".
+  `published` keeps `bg-success` (`rgb(100, 164, 78)`) — "done, in
+  gradebook". The colours apply in both the counter chips at the
+  top of the manage page and in the per-row badges inside the
+  table.
+
+### Changed
+
+- **`pending_ai` badge moved from `bg-info` to `bg-light text-dark`.**
+  v1.0.14 had `pending_ai` in cyan, which would have clashed with
+  the new `ai_proposed` cyan once v1.0.15 landed. `pending_ai` is a
+  transient state (a few seconds during the in-flight LLM call) and
+  the auto-refresh polling notice above the table already surfaces
+  the activity — the badge can be subtle. Light gray with dark text
+  reads as "this row is paused" without competing for attention.
+
 ## [v1.0.14-beta] — 2026-05-17
 
 ### Fixed
