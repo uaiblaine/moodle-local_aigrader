@@ -21,7 +21,14 @@
  * trigger AI grading on each one. Shows current AI Grader Pro status per
  * submission and auto-refreshes while any are pending.
  *
- * URL: /local/aigrader/manage.php?cmid=<course module id>
+ * v1.0.9 switched the table from a single un-paginated `html_table` to
+ * `\local_aigrader\output\manage_table` (a `\table_sql` subclass) which
+ * gives free pagination, sortable columns and "items per page" — matching
+ * the look-and-feel of mod_assign's native grading view. The status
+ * counter is still computed over the full cohort (separate cheap GROUP BY
+ * query) so the chip totals stay correct regardless of the visible page.
+ *
+ * URL: /local/aigrader/manage.php?cmid=<course module id>[&filter=...&page=...&perpage=...]
  *
  * @package    local_aigrader
  * @copyright  2026 Hernán Díaz
@@ -30,6 +37,8 @@
 
 require(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
+
+use local_aigrader\output\manage_table;
 
 $cmid = required_param('cmid', PARAM_INT);
 
@@ -43,7 +52,9 @@ $assign = $DB->get_record('assign', ['id' => $cm->instance], '*', MUST_EXIST);
 $config = $DB->get_record('local_aigrader_assign', ['assignid' => $assign->id]);
 
 // -------------------------------------------------------------------.
-// Handle POST: enqueue grading for one submission.
+// Handle POST: enqueue grading for one submission. Same code path as
+// v1.0.8 — kept identical because the per-row "Calificar con IA" button
+// in manage_table::col_action() posts here.
 // -------------------------------------------------------------------.
 $action = optional_param('action', '', PARAM_ALPHA);
 if ($action === 'enqueue' && data_submitted()) {
@@ -64,8 +75,7 @@ if ($action === 'enqueue' && data_submitted()) {
         MUST_EXIST
     );
 
-    // Pre-insert pending row for immediate UI feedback. The manager will.
-    // Upsert this row again when the task runs.
+    // Pre-insert pending row for immediate UI feedback.
     $existing = $DB->get_record('local_aigrader_submission', ['submissionid' => $submissionid]);
     $now = time();
     if (!$existing) {
@@ -87,15 +97,8 @@ if ($action === 'enqueue' && data_submitted()) {
         ]);
     }
 
-    // Grade synchronously in this request. The teacher just clicked the
-    // button and is actively waiting; making the LLM call right here
-    // gives a 2-5 s response time instead of "queued, come back after
-    // the next cron tick" — see the v1.0.4 pilot feedback ("estaría
-    // esperando un minuto delante de los clientes"). The async adhoc
-    // task class is still kept around for future auto-grading flows
-    // triggered by student submission events, which DO need the cron
-    // pattern so they don't block the student's submit request.
-    \core\session\manager::write_close(); // Release the session lock during the LLM call.
+    // Grade synchronously in this request.
+    \core\session\manager::write_close();
     @set_time_limit(120);
 
     $mgr    = new \local_aigrader\manager();
@@ -119,9 +122,6 @@ if ($action === 'enqueue' && data_submitted()) {
         );
     }
 
-    // Generic LLM failure (rate limit, payload, auth, parse…). The
-    // detailed banner on the manage table already classifies and shows
-    // the cause; here we just surface a short headline in the toast.
     $classified = \local_aigrader\error_classifier::classify((string) $result->error);
     redirect(
         new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]),
@@ -132,20 +132,44 @@ if ($action === 'enqueue' && data_submitted()) {
 }
 
 // -------------------------------------------------------------------.
+// Read filter / pagination params.
+//
+// PARAM_ALPHAEXT (not PARAM_ALPHA) on `filter`: the bucket keys contain
+// underscores (e.g. 'ai_proposed') and PARAM_ALPHA would silently strip
+// them, making the filter look broken to the teacher.
+// -------------------------------------------------------------------.
+$filter  = optional_param('filter',  '',   PARAM_ALPHAEXT);
+$perpage = optional_param('perpage', 25,   PARAM_INT);
+$page    = optional_param('page',    0,    PARAM_INT);
+
+$validfilters = ['ai_proposed', 'teacher_reviewed', 'published', 'problems', 'none'];
+if ($filter !== '' && !in_array($filter, $validfilters, true)) {
+    $filter = '';
+}
+
+// Clamp perpage to a safe set; "0" means "all" (used when the teacher
+// wants to bulk-act on the whole cohort without paginating).
+$allowedperpage = [10, 25, 50, 100, 0];
+if (!in_array($perpage, $allowedperpage, true)) {
+    $perpage = 25;
+}
+
+// -------------------------------------------------------------------.
 // Render the page.
 // -------------------------------------------------------------------.
-$PAGE->set_url(new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]));
+$pageurl = new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]);
+if ($filter !== '') {
+    $pageurl->param('filter', $filter);
+}
+if ($perpage !== 25) {
+    $pageurl->param('perpage', $perpage);
+}
+
+$PAGE->set_url($pageurl);
 $PAGE->set_context($context);
 $PAGE->set_pagelayout('incourse');
 $PAGE->set_title(get_string('manage_pagetitle', 'local_aigrader', format_string($assign->name)));
 $PAGE->set_heading($course->fullname);
-
-// Hide the activity header (which would re-render the assignment intro at
-// the top of the page). The teacher already knows the assignment from the
-// breadcrumb and the heading below; surfacing the intro here pushes the
-// grading queue — and any failure banner — below the fold. `activityheader`
-// is a magic property on $PAGE that is always defined (lazily), so we just
-// call it directly.
 $PAGE->activityheader->set_attrs(['hidecompletion' => true]);
 $PAGE->activityheader->disable();
 
@@ -161,31 +185,49 @@ if (!$config || empty($config->enabled)) {
     exit;
 }
 
-// Fetch all latest, submitted submissions for this assignment.
-// Use the standard set of name fields so fullname() does not emit debug warnings.
-$namefields = \core_user\fields::for_name()->get_sql('u', false, '', '', false);
-$sql = "SELECT s.id            AS submissionid,
-               s.userid        AS studentid,
-               s.timemodified  AS submitted_at,
-               {$namefields->selects},
-               ag.id            AS aigrader_id,
-               ag.status        AS ai_status,
-               ag.proposed_grade,
-               ag.timeprocessed,
-               ag.error_message
-        FROM   {assign_submission} s
-        JOIN   {user} u            ON u.id = s.userid
-        LEFT JOIN {local_aigrader_submission} ag ON ag.submissionid = s.id
-        WHERE  s.assignment = :assignid
-          AND  s.latest = 1
-          AND  s.status = :submitted
-        ORDER BY u.lastname, u.firstname";
-$rows = $DB->get_records_sql($sql, array_merge([
-    'assignid'  => $assign->id,
-    'submitted' => ASSIGN_SUBMISSION_STATUS_SUBMITTED,
-], $namefields->params));
+// -------------------------------------------------------------------.
+// Status counter (separate query, no pagination/filter applied).
+//
+// This is the source of truth for the chip totals and for the auto-refresh
+// trigger. Runs as a single GROUP BY so it stays cheap (~10ms) even on
+// large cohorts.
+// -------------------------------------------------------------------.
+$rawcounts = $DB->get_records_sql(
+    "SELECT COALESCE(ag.status, '__none__') AS aistatus,
+            COUNT(*) AS n
+       FROM {assign_submission} s
+       LEFT JOIN {local_aigrader_submission} ag ON ag.submissionid = s.id
+      WHERE s.assignment = :assignid
+        AND s.latest = 1
+        AND s.status  = :submitted
+   GROUP BY ag.status",
+    [
+        'assignid'  => $assign->id,
+        'submitted' => ASSIGN_SUBMISSION_STATUS_SUBMITTED,
+    ]
+);
 
-if (empty($rows)) {
+$totalrows = 0;
+$counts = ['ai_proposed' => 0, 'teacher_reviewed' => 0, 'published' => 0,
+    'problems' => 0, 'none' => 0];
+$pendingcount = 0;
+foreach ($rawcounts as $rc) {
+    $n = (int) $rc->n;
+    $totalrows += $n;
+    $raw = $rc->aistatus;
+    if ($raw === '__none__' || $raw === 'pending_ai') {
+        $counts['none'] += $n;
+    } else if ($raw === 'error' || $raw === 'unsupported_format') {
+        $counts['problems'] += $n;
+    } else if (isset($counts[$raw])) {
+        $counts[$raw] = $n;
+    }
+    if ($raw === 'pending_ai') {
+        $pendingcount += $n;
+    }
+}
+
+if ($totalrows === 0) {
     echo $OUTPUT->notification(
         get_string('manage_no_submissions', 'local_aigrader'),
         \core\output\notification::NOTIFY_INFO
@@ -194,15 +236,11 @@ if (empty($rows)) {
     exit;
 }
 
-// Auto-refresh while any AI grading is pending.
-$haspending = false;
-foreach ($rows as $r) {
-    if (($r->ai_status ?? '') === 'pending_ai') {
-        $haspending = true;
-        break;
-    }
-}
-if ($haspending) {
+// Auto-refresh while any grading is in flight. With pagination the
+// teacher might not see the pending row on the current page, but we
+// still want to keep the counter chip live — hence: trigger off the
+// global pending count, not just visible rows.
+if ($pendingcount > 0) {
     $PAGE->requires->js_init_code("setTimeout(function() { window.location.reload(); }, 4000);");
     echo $OUTPUT->notification(
         get_string('manage_polling', 'local_aigrader'),
@@ -210,63 +248,35 @@ if ($haspending) {
     );
 }
 
-// Teacher-only banner aggregating any AI-grading failures, grouped by error
-// kind. Renders before the table so the teacher cannot miss it. Students
-// never reach this page (capability local/aigrader:use is checked above).
-echo \local_aigrader\output\error_banner::render($rows, $cmid);
-
 // -------------------------------------------------------------------.
-// Status counters + clickable filter chips.
-//
-// We bucket each row into one of five user-facing buckets that map onto
-// the badge colours in the table:
-//   - 'ai_proposed'      green   "Propuesta IA" (the teacher's queue)
-//   - 'teacher_reviewed' blue    "Revisada por profesor"
-//   - 'published'        green   "Publicada"
-//   - 'problems'         yellow  "Formato no soportado" + "Error"
-//   - 'none'             gray    Submission with no AI status yet (status = NULL)
-//
-// 'pending_ai' is treated as 'none' for filtering purposes — the polling
-// banner above is the right place to surface in-flight work, not a sticky
-// filter on a transient state.
-//
-// Click on a chip filters the table to that bucket (?filter=...). Click
-// again on the same chip — or on the "Todas" chip — clears the filter.
-// We never hide a row from the bulk action form: the row checkboxes that
-// are filtered out simply don't render, so the teacher can only act on
-// what they can see. That's an intentional safety property.
+// Error banner — operates on ALL error rows across the assign, not
+// just the page currently visible. Separate query for fidelity at the
+// cost of one extra ~ms.
 // -------------------------------------------------------------------.
-// PARAM_ALPHAEXT (not PARAM_ALPHA) — the bucket keys contain underscores
-// (e.g. 'ai_proposed') and PARAM_ALPHA would silently strip them, making
-// the filter look broken to the teacher.
-$filter = optional_param('filter', '', PARAM_ALPHAEXT);
-$validfilters = ['ai_proposed', 'teacher_reviewed', 'published', 'problems', 'none'];
-if ($filter !== '' && !in_array($filter, $validfilters, true)) {
-    $filter = '';
+if ($counts['problems'] > 0) {
+    $namefields = \core_user\fields::for_name()->get_sql('u', false, '', '', false);
+    $errorrows = $DB->get_records_sql(
+        "SELECT s.id AS submissionid, s.userid AS studentid,
+                {$namefields->selects},
+                ag.status AS ai_status, ag.error_message
+           FROM {assign_submission} s
+           JOIN {user} u ON u.id = s.userid
+           JOIN {local_aigrader_submission} ag ON ag.submissionid = s.id
+          WHERE s.assignment = :assignid AND s.latest = 1
+            AND s.status = :submitted
+            AND ag.status = :errstatus",
+        array_merge([
+            'assignid'  => $assign->id,
+            'submitted' => ASSIGN_SUBMISSION_STATUS_SUBMITTED,
+            'errstatus' => 'error',
+        ], $namefields->params)
+    );
+    echo \local_aigrader\output\error_banner::render($errorrows, $cmid);
 }
 
-$bucketof = function ($status) {
-    if ($status === null || $status === 'pending_ai') {
-        return 'none';
-    }
-    if ($status === 'error' || $status === 'unsupported_format') {
-        return 'problems';
-    }
-    return $status; // ai_proposed | teacher_reviewed | published.
-};
-
-$counts = ['ai_proposed' => 0, 'teacher_reviewed' => 0, 'published' => 0,
-    'problems' => 0, 'none' => 0];
-foreach ($rows as $r) {
-    $counts[$bucketof($r->ai_status ?? null)]++;
-}
-
-// Build the chip row. Chips render even when count is 0 so the layout
-// is stable across reloads; the inactive ones get a muted style.
-// Force text-white on dark-background chips. Some Moodle themes
-// (notably Moove) don't carry Bootstrap 5's "white text on .badge with
-// .bg-primary/.bg-success" rule, leaving the count invisible. Spell it
-// out so the chip stays readable independent of theme.
+// -------------------------------------------------------------------.
+// Counter chips (clickable filter).
+// -------------------------------------------------------------------.
 $chipdefs = [
     'ai_proposed'      => ['label' => 'count_ai_proposed',      'class' => 'bg-success text-white'],
     'teacher_reviewed' => ['label' => 'count_teacher_reviewed', 'class' => 'bg-primary text-white'],
@@ -275,13 +285,9 @@ $chipdefs = [
     'none'             => ['label' => 'count_none',             'class' => 'bg-secondary text-white'],
 ];
 
-// gap-3 (1rem) between chips horizontally; row-gap-2 (0.5rem) when
-// the chips wrap to multiple lines on narrow screens. Pilot teacher
-// feedback flagged the v1.0.6 spacing as "todo junto" — the chips
-// sit too close to each other and to the bulk bar below.
 echo html_writer::start_div('aigrader-counter mb-4 d-flex flex-wrap align-items-center gap-3 row-gap-2');
 echo html_writer::tag('strong',
-    get_string('count_total', 'local_aigrader', count($rows)),
+    get_string('count_total', 'local_aigrader', $totalrows),
     ['class' => 'me-1']
 );
 
@@ -290,10 +296,12 @@ foreach ($chipdefs as $key => $def) {
     $isactive = ($filter === $key);
     $ismuted = ($count === 0 && !$isactive);
 
-    // Toggle behavior: clicking the active chip clears the filter.
     $targeturl = new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]);
     if (!$isactive) {
         $targeturl->param('filter', $key);
+    }
+    if ($perpage !== 25) {
+        $targeturl->param('perpage', $perpage);
     }
 
     $chipclass = 'badge ' . $def['class'];
@@ -319,51 +327,26 @@ foreach ($chipdefs as $key => $def) {
 }
 
 if ($filter !== '') {
-    echo html_writer::link(
-        new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]),
+    $clearurl = new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]);
+    if ($perpage !== 25) {
+        $clearurl->param('perpage', $perpage);
+    }
+    echo html_writer::link($clearurl,
         get_string('count_clear_filter', 'local_aigrader'),
         ['class' => 'ms-2 small']
     );
 }
 echo html_writer::end_div();
 
-// Apply the filter. We keep the unfiltered $rows reference around so the
-// counter math above stays honest; the table renders only $visiblerows.
-$visiblerows = $rows;
-if ($filter !== '') {
-    $visiblerows = array_filter($rows, fn($r) => $bucketof($r->ai_status ?? null) === $filter);
-}
-
-if (empty($visiblerows)) {
-    echo $OUTPUT->notification(
-        get_string('count_no_rows_match_filter', 'local_aigrader'),
-        \core\output\notification::NOTIFY_INFO
-    );
-}
-
 // -------------------------------------------------------------------.
-// Bulk actions form. Wraps the table so the teacher can apply one
-// action ("Publicar tal cual", "Calificar con IA", …) to many rows in
-// one click. POSTs to bulk.php which classifies, optionally shows a
-// confirmation page for destructive actions, and dispatches to the
-// bulk dispatcher.
+// Bulk actions form.
 // -------------------------------------------------------------------.
-// Bulk dropdown is intentionally small: just one destructive action
-// (publish) and one work action (grade with AI). v1.0.5 had four actions;
-// the pilot feedback was that the matrix was too noisy and that "Recalificar"
-// vs "Calificar con IA" was a distinction without difference for the
-// teacher — they pick "Calificar con IA" and the dispatcher figures out
-// whether each row is a first grade or a re-grade.
 $bulkactions = [
     ''                                                       => get_string('bulk_action_choose', 'local_aigrader'),
     \local_aigrader\bulk\dispatcher::ACTION_APPROVE_PUBLISH => get_string('bulk_action_approve_publish', 'local_aigrader'),
     \local_aigrader\bulk\dispatcher::ACTION_GRADE_AI       => get_string('bulk_action_grade_ai', 'local_aigrader'),
 ];
 
-// Render the bulk form OUTSIDE the table (not wrapping it) so the per-row
-// "Recalificar con IA" forms below are not illegally nested. The row
-// checkboxes inside the table use HTML5's `form="aigrader-bulk-form"`
-// attribute to participate in this form even though they live outside it.
 echo html_writer::start_tag('form', [
     'method' => 'post',
     'action' => (new moodle_url('/local/aigrader/bulk.php'))->out(false),
@@ -373,9 +356,6 @@ echo html_writer::start_tag('form', [
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'cmid',    'value' => $cmid]);
 
-// gap-3 (1rem) between label, dropdown and Apply button so the
-// elements breathe a bit; previously gap-2 made them look like a
-// single visual blob.
 echo html_writer::start_div('aigrader-bulk-bar d-flex flex-wrap align-items-center gap-3 mb-3');
 echo html_writer::tag('label', get_string('bulk_label_with_selected', 'local_aigrader'),
     ['for' => 'aigrader-bulk-action', 'class' => 'form-label mb-0']);
@@ -399,117 +379,105 @@ echo html_writer::tag('button', get_string('bulk_apply', 'local_aigrader'), [
 echo html_writer::end_div();
 echo html_writer::end_tag('form');
 
-$table = new html_table();
-$selectallhtml = html_writer::empty_tag('input', [
-    'type'       => 'checkbox',
-    'id'         => 'aigrader-select-all',
-    'aria-label' => get_string('bulk_select_all', 'local_aigrader'),
-]);
-$table->head = [
-    $selectallhtml,
-    get_string('th_student', 'local_aigrader'),
-    get_string('th_submitted', 'local_aigrader'),
-    get_string('th_status', 'local_aigrader'),
-    get_string('th_grade', 'local_aigrader'),
-    get_string('th_action', 'local_aigrader'),
+// -------------------------------------------------------------------.
+// Items-per-page selector (mirrors mod_assign grader). Plain GET form;
+// submitting it just sets ?perpage=X and the page reloads.
+// -------------------------------------------------------------------.
+$perpageoptions = [
+    10  => '10',
+    25  => '25',
+    50  => '50',
+    100 => '100',
+    0   => get_string('count_perpage_all', 'local_aigrader'),
 ];
-$table->attributes['class'] = 'generaltable';
-$table->data = [];
-
-foreach ($visiblerows as $r) {
-    $student   = fullname($r);
-    $submitted = $r->submitted_at ? userdate($r->submitted_at, get_string('strftimedatetimeshort')) : '-';
-    $status    = local_aigrader_render_status($r->ai_status, $r->error_message);
-    $grade     = $r->proposed_grade !== null ? format_float($r->proposed_grade, 2) . ' / 10' : '-';
-
-    // form="aigrader-bulk-form" associates this checkbox with the bulk
-    // form rendered above, so it participates in the bulk POST even
-    // though it lives inside the per-row table cell (which can't be
-    // wrapped in <form> without breaking the per-row enqueue button).
-    $checkbox = html_writer::empty_tag('input', [
-        'type'       => 'checkbox',
-        'name'       => 'ids[]',
-        'value'      => $r->submissionid,
-        'form'       => 'aigrader-bulk-form',
-        'class'      => 'aigrader-row-check',
-        'aria-label' => get_string('bulk_select_row', 'local_aigrader', $student),
-    ]);
-
-    // Per-row button label is always "Calificar con IA" — see v1.0.6 UX
-    // simplification: distinguishing "first grade" from "re-grade" gave
-    // the teacher no actionable information (both call the same code
-    // path) and made the dropdown / button text unnecessarily wordy.
-    $btnlabel = get_string('btn_grade_with_ai', 'local_aigrader');
-
-    $disabled = ($r->ai_status === 'pending_ai');
-
-    $action = '';
-
-    // Primary CTA: a "Revisar →" link to review.php.
-    //   - For submissions WITH an AI proposal (ai_proposed / teacher_reviewed / published)
-    //     review.php pre-fills the form with the AI's grade and feedback.
-    //   - For submissions WITHOUT a usable AI proposal (unsupported_format, error)
-    //     review.php opens the same form with empty defaults so the teacher can
-    //     grade by hand without leaving AI Grader Pro for Moodle's native grader.
-    //   - Hidden only for: NULL (never run) and pending_ai (in flight).
-    $reviewablestatuses = ['ai_proposed', 'teacher_reviewed', 'published',
-        'unsupported_format', 'error'];
-    if (in_array($r->ai_status, $reviewablestatuses, true)) {
-        $reviewlabel = $r->ai_status === 'published'
-            ? get_string('btn_view_published', 'local_aigrader')
-            : get_string('btn_review', 'local_aigrader');
-        $action .= html_writer::link(
-            new moodle_url('/local/aigrader/review.php', ['submissionid' => $r->submissionid]),
-            $reviewlabel,
-            ['class' => 'btn btn-success btn-sm me-1']
-        );
+echo html_writer::start_tag('form', [
+    'method' => 'get',
+    'action' => (new moodle_url('/local/aigrader/manage.php'))->out(false),
+    'class'  => 'aigrader-perpage-form mb-2 d-flex align-items-center gap-2',
+]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'cmid', 'value' => $cmid]);
+if ($filter !== '') {
+    echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'filter', 'value' => $filter]);
+}
+echo html_writer::tag('label',
+    get_string('count_perpage_label', 'local_aigrader'),
+    ['for' => 'aigrader-perpage', 'class' => 'form-label mb-0 small text-muted']);
+$ppsel = html_writer::start_tag('select', [
+    'name'    => 'perpage',
+    'id'      => 'aigrader-perpage',
+    'class'   => 'form-select form-select-sm',
+    'style'   => 'max-width: 110px;',
+    'onchange' => 'this.form.submit();',
+]);
+foreach ($perpageoptions as $value => $label) {
+    $attrs = ['value' => $value];
+    if ((int) $value === (int) $perpage) {
+        $attrs['selected'] = 'selected';
     }
+    $ppsel .= html_writer::tag('option', s($label), $attrs);
+}
+$ppsel .= html_writer::end_tag('select');
+echo $ppsel;
+echo html_writer::end_tag('form');
 
-    // Re-grade / Grade-with-AI button (form post that enqueues a task).
-    if (!$disabled) {
-        $action .= html_writer::start_tag('form', [
-            'method' => 'post',
-            'action' => $PAGE->url->out(false),
-            'style'  => 'display:inline;',
-        ]);
-        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
-        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'enqueue']);
-        $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'submissionid', 'value' => $r->submissionid]);
-        // Button style: primary when "Calificar con IA" is the most
-        // useful next action (no proposal yet), outline-secondary as the
-        // soft "re-grade" option whenever a Revisar button is already the
-        // primary CTA for the row.
-        $isprimaryforrow = ($r->ai_status === null || $r->ai_status === 'pending_ai');
-        $btnattrs = [
-            'type'  => 'submit',
-            'value' => $btnlabel,
-            'class' => $isprimaryforrow ? 'btn btn-primary btn-sm' : 'btn btn-outline-secondary btn-sm',
-        ];
-        // Native browser confirm() when re-grading a row that has
-        // already been published. The gradebook value stays put either
-        // way, but a published row resetting back to "Propuesta IA"
-        // after an accidental click is confusing for the teacher and
-        // wastes provider tokens. The bulk action's confirmation page
-        // is the equivalent safety gate on the bulk path. JSON-encode
-        // the message so accents/quotes survive the inline attribute.
-        if ($r->ai_status === 'published') {
-            $confirmmsg = get_string('confirm_regrade_published', 'local_aigrader');
-            $btnattrs['onclick'] = 'return confirm(' . json_encode($confirmmsg) . ');';
-        }
-        $action .= html_writer::empty_tag('input', $btnattrs);
-        $action .= html_writer::end_tag('form');
-    } else {
-        $action .= html_writer::span(get_string('btn_pending', 'local_aigrader'), 'text-muted');
-    }
+// -------------------------------------------------------------------.
+// The table itself.
+// -------------------------------------------------------------------.
+$table = new manage_table($cmid);
+$table->define_baseurl($pageurl);
 
-    $table->data[] = [$checkbox, $student, $submitted, $status, $grade, $action];
+// SQL pieces. Note: table_sql appends its own ORDER BY (via the
+// get_sql_sort() override on the class) and its own LIMIT/OFFSET.
+$namefields = \core_user\fields::for_name()->get_sql('u', false, '', '', false);
+$fields = "s.id            AS submissionid,
+           s.userid        AS studentid,
+           s.timemodified  AS submitted_at,
+           {$namefields->selects},
+           ag.id            AS aigrader_id,
+           ag.status        AS ai_status,
+           ag.proposed_grade,
+           ag.timeprocessed,
+           ag.error_message";
+$from = "{assign_submission} s
+         JOIN {user} u ON u.id = s.userid
+         LEFT JOIN {local_aigrader_submission} ag ON ag.submissionid = s.id";
+$where = 's.assignment = :assignid AND s.latest = 1 AND s.status = :submitted';
+$params = array_merge([
+    'assignid'  => $assign->id,
+    'submitted' => ASSIGN_SUBMISSION_STATUS_SUBMITTED,
+], $namefields->params);
+
+// Apply filter at the SQL level — far cheaper than fetching everything
+// and filtering in PHP, and works correctly with pagination.
+switch ($filter) {
+    case 'ai_proposed':
+        $where .= ' AND ag.status = :fstatus';
+        $params['fstatus'] = 'ai_proposed';
+        break;
+    case 'teacher_reviewed':
+        $where .= ' AND ag.status = :fstatus';
+        $params['fstatus'] = 'teacher_reviewed';
+        break;
+    case 'published':
+        $where .= ' AND ag.status = :fstatus';
+        $params['fstatus'] = 'published';
+        break;
+    case 'problems':
+        $where .= " AND ag.status IN ('error', 'unsupported_format')";
+        break;
+    case 'none':
+        $where .= " AND (ag.status IS NULL OR ag.status = 'pending_ai')";
+        break;
 }
 
-echo html_writer::table($table);
+$table->set_sql($fields, $from, $where, $params);
 
-// Tiny inline JS for the "select all" checkbox. No AMD module needed for
-// this; it's a five-line behavior that only touches checkboxes inside the
-// bulk form.
+// perpage=0 means "show all" — pass a sensible upper bound that
+// flexible_table accepts (it interprets 0 as "no pagination").
+$pagesizeforout = $perpage === 0 ? 10000 : $perpage;
+$table->out($pagesizeforout, false);
+
+// Tiny inline JS for the "select all" header checkbox.
 $PAGE->requires->js_init_code(<<<'JS'
     document.getElementById('aigrader-select-all')?.addEventListener('change', function(e) {
         document.querySelectorAll('.aigrader-row-check').forEach(function(c) {
@@ -528,74 +496,3 @@ echo html_writer::div(
 );
 
 echo $OUTPUT->footer();
-
-// -------------------------------------------------------------------.
-// Local helpers.
-// -------------------------------------------------------------------.
-/**
- * Render the AI grading status as a badge.
- *
- * For statuses that carry an error/skip detail message, the long text is
- * collapsed into a small ⓘ icon. The detail is exposed via the HTML
- * `title` attribute (native browser tooltip on hover — keeps the row to
- * one line and works in every theme without depending on Bootstrap
- * popover/tooltip JS being initialised). The detail banner above the
- * table still has the full "Show raw error" disclosure for cases where
- * the teacher needs to copy the text out.
- */
-function local_aigrader_render_status(?string $status, ?string $errormsg): string {
-    if ($status === null) {
-        return html_writer::span(get_string('status_none', 'local_aigrader'), 'badge bg-secondary text-white');
-    }
-    switch ($status) {
-        case 'pending_ai':
-            return html_writer::span(get_string('status_pending', 'local_aigrader'), 'badge bg-info text-white');
-        case 'ai_proposed':
-            return html_writer::span(get_string('status_proposed', 'local_aigrader'), 'badge bg-success text-white');
-        case 'teacher_reviewed':
-            return html_writer::span(get_string('status_reviewed', 'local_aigrader'), 'badge bg-primary text-white');
-        case 'published':
-            return html_writer::span(get_string('status_published', 'local_aigrader'), 'badge bg-success text-white');
-        case 'error':
-            $badge = html_writer::span(get_string('status_error', 'local_aigrader'), 'badge bg-danger text-white');
-            if ($errormsg) {
-                // Use the classifier's summary as the tooltip body — it
-                // strips provider marketing tails (e.g. Groq's "Upgrade to
-                // Dev Tier..." URL) so the hovered detail stays useful.
-                $short = \local_aigrader\error_classifier::summarize_raw($errormsg);
-                $badge .= local_aigrader_info_icon($short);
-            }
-            return $badge;
-        case 'unsupported_format':
-            $badge = html_writer::span(get_string('status_unsupported', 'local_aigrader'), 'badge bg-warning text-dark');
-            if ($errormsg) {
-                $badge .= local_aigrader_info_icon($errormsg);
-            }
-            return $badge;
-        default:
-            return html_writer::span(s($status), 'badge bg-secondary text-white');
-    }
-}
-
-/**
- * Render a small "info" icon (Unicode ⓘ) whose HTML `title` attribute
- * carries a longer detail string. Used to collapse multi-line skip /
- * error reasons that would otherwise break the grid layout.
- *
- * Unicode ⓘ (U+24D8) renders consistently across platforms without
- * requiring any specific FontAwesome variant — important because some
- * Moodle themes load fa-* and others load fa-solid-*.
- *
- * @param string $detail Plain text shown on hover. Will be HTML-escaped.
- * @return string HTML for the icon to be appended to the badge.
- */
-function local_aigrader_info_icon(string $detail): string {
-    return ' ' . html_writer::tag('span', 'ⓘ', [
-        'class'      => 'aigrader-info-icon ms-1 text-muted',
-        'title'      => $detail,
-        'tabindex'   => 0,
-        'role'       => 'button',
-        'aria-label' => $detail,
-        'style'      => 'cursor: help; font-size: 1.1em;',
-    ]);
-}

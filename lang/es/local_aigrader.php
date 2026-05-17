@@ -295,6 +295,8 @@ $string['count_none']              = '{$a} sin calificar IA';
 $string['count_filter_to']         = 'Filtrar: {$a}';
 $string['count_clear_filter']      = 'Mostrar todas';
 $string['count_no_rows_match_filter'] = 'No hay entregas en este estado. Quita el filtro para ver el resto.';
+$string['count_perpage_label']        = 'Mostrar por página:';
+$string['count_perpage_all']          = 'Todas';
 
 // -----------------------------------------------------------------------.
 // Extraction (dispatcher.php) — reasons a file or submission was skipped.

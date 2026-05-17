@@ -295,6 +295,8 @@ $string['count_none']              = '{$a} not yet graded';
 $string['count_filter_to']         = 'Filter: {$a}';
 $string['count_clear_filter']      = 'Show all';
 $string['count_no_rows_match_filter'] = 'No submissions in this state. Clear the filter to see the rest.';
+$string['count_perpage_label']        = 'Show per page:';
+$string['count_perpage_all']          = 'All';
 
 // -----------------------------------------------------------------------.
 // Extraction (dispatcher.php) — reasons a file or submission was skipped.

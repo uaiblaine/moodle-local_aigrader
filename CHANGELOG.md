@@ -5,6 +5,87 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.9-beta] — 2026-05-17
+
+### Changed
+
+- **Manage page now uses `\table_sql` for paginated, sortable rendering.**
+  Previously (v1.0.5 - v1.0.8) `manage.php` loaded every submission for
+  the assign in a single un-paginated `html_table`. That works at the
+  microcredencial scale (12-30 alumnos) but degrades at 200+ rows and
+  was not the Moodle Plugin Directory expectation — every native
+  grading page in core uses `\flexible_table` / `\table_sql`. Pilot
+  user asked the right question ("en el moodle normal cuando te
+  salen las prácticas tienes paginación no?") and the answer was
+  "yes, and we should match it".
+
+  The refactor:
+  - New class `\local_aigrader\output\manage_table` extends
+    `\table_sql`. Defines six columns (checkbox, student, submitted_at,
+    status, grade, action). Four of them are sortable: student
+    (last/first name), submitted (timemodified), status (raw
+    ai_status), grade (proposed_grade). Sortable mapping is done via
+    `get_sql_sort()` override so the column display names don't have
+    to match SQL aliases.
+  - Per-column renderers live as `col_*` methods on the class.
+    `local_aigrader_render_status()` and `local_aigrader_info_icon()`
+    moved from manage.php global functions into static methods on
+    `manage_table` for clean encapsulation.
+  - `manage.php` no longer fetches the full row list. Two queries
+    instead:
+      1. A cheap GROUP BY (~10ms on any cohort size) that returns the
+         per-status raw counts → fills the chip totals AND the
+         `pending_ai` watcher for the auto-refresh.
+      2. The paginated row query, run by `\table_sql::out()` itself.
+    Plus a third query when `counts['problems'] > 0` for the error
+    banner (which still needs the full set of error rows, not the
+    visible page only).
+
+### Added
+
+- **"Mostrar X por página" selector** above the table, with options
+  10 / 25 / 50 / 100 / "Todas". 25 is the default. Submits via plain
+  GET (changes the `?perpage=` URL param and the table re-renders).
+  Mirrors the equivalent control on mod_assign's grading view.
+- **Pagination controls** (top + bottom of the table) provided for
+  free by `\table_sql`. Style matches the rest of Moodle.
+- **Column sorting** via clickable headers (alumno / entregado /
+  estado IA / nota propuesta). The current sort column shows an
+  ascending/descending arrow.
+
+### Notes / trade-offs
+
+- **Select-all-across-pages is intentionally NOT implemented.** Matches
+  mod_assign's behaviour: the standard "With selected..." dropdown on
+  Moodle's grading view also only acts on visible rows. A teacher who
+  needs to bulk-act on a 200-row cohort bumps "Mostrar X por página"
+  to "Todas" first. Familiar Moodle pattern, no new mental model.
+- **Filter persists with pagination**: clicking a counter chip sets
+  `?filter=<bucket>` and the table SQL applies the filter at the
+  WHERE clause level (not array_filter in PHP) so it works correctly
+  with LIMIT/OFFSET.
+- **Counter chips show cohort-wide totals** even when a filter is
+  active or pagination hides rows. Source of truth is the GROUP BY
+  counter query, separate from the table SQL.
+
+### Tests
+
+- 85 tests / 199 assertions still green. No new tests added: the
+  refactor moves rendering into a `\table_sql` subclass whose
+  per-column output is best validated by the existing Behat / live
+  walkthrough rather than phpunit.
+
+### Verification (live, prof_demo on course 3, cmid=5)
+
+- `?perpage=10` → 2 pages, 10 + 3 rows. Pagination bar shows `1 2 »`.
+- `?perpage=10&page=1` → page 2 shows Rodríguez Pérez, Soto
+  Rodríguez, Suárez Recio (last 3 rows).
+- `?tsort=grade&tdir=4` → grades sorted ascending (7.40 → 8.53).
+- `?filter=problems` → only Suárez Recio (Formato no soportado).
+- All previously-working features (counter chips, bulk dropdown,
+  per-row Revisar / Calificar con IA, info icon ⓘ, confirm() on
+  published re-grade) still render and behave correctly.
+
 ## [v1.0.8-beta] — 2026-05-17
 
 ### Added

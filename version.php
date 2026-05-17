@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051703;           // YYYYMMDDXX. v1.0.8: inline confirm() on per-row "Calificar con IA" for already-published rows; more breathing room (gap-3) in counter chips and bulk bar.
+$plugin->version   = 2026051704;           // YYYYMMDDXX. v1.0.9: manage page paginated + sortable via \table_sql; per-cohort status counter via separate cheap GROUP BY query; Moodle-native "items per page" selector.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.8-beta';
+$plugin->release   = 'v1.0.9-beta';
