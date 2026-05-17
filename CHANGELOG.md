@@ -5,6 +5,49 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.20-beta] — 2026-05-17
+
+### Added
+
+- **GitHub Actions CI workflow**
+  (`.github/workflows/moodle-ci.yml`) using `moodlehq/moodle-plugin-ci`
+  v4. Runs on every push and pull-request against `main` across a
+  matrix of PHP 8.1 / 8.2 / 8.3 and Moodle 4.5 LTS / 5.0, on both
+  MariaDB 10.11 and PostgreSQL 14. Each job runs the full Plugin
+  Directory peer-review check pack: `phplint`, `phpmd`,
+  Moodle code checker (`phpcs --max-warnings 0`), PHPDoc checker,
+  plugin metadata validation, upgrade-savepoints check, Mustache
+  lint, Grunt, PHPUnit (`--fail-on-warning`) and Behat
+  (`--profile chrome`). Catches regressions before review.
+- **`SECURITY.md`** — security-reporting policy, supported versions,
+  severity guidance, in-scope / out-of-scope boundaries, special
+  notes on AI-provider credential handling (the plugin never persists
+  those — they live in the AI Subsystem) and on the audit log's
+  prompt-hash-only storage.
+- **`CONTRIBUTING.md`** — contributor guide: what we accept, what we
+  decline (notably auto-publish, audit-log bypasses, vendor-specific
+  code paths), dev-environment setup with `moodle-plugin-ci`, coding
+  style, testing requirements, translations process, commit-message
+  convention, PR checklist and the maintainer-only release process.
+- **`.github/ISSUE_TEMPLATE/`** — structured issue forms:
+  `bug_report.yml` (plugin/Moodle/PHP versions, AI provider, repro
+  steps, severity), `feature_request.yml` (problem-first framing,
+  who-benefits, adoption-impact dropdown), and `config.yml` routing
+  security reports to email and core-Moodle bugs upstream.
+- **`.github/pull_request_template.md`** — what-changes / linked-issue
+  / how-I-tested / checklist enforcing HITL guarantee, no version
+  bumps in PRs, etc.
+
+### Closes
+
+- The "before-submission" engineering hygiene checklist: CI is now
+  green-or-red on every push, security disclosure has a documented
+  channel, contributors have a clear ruleset, and issues / PRs land
+  in templated forms that triage faster. With v1.0.19 the *artefacts*
+  for submission were complete; v1.0.20 makes the *engineering
+  surface* match what Plugin Directory reviewers and OSS contributors
+  expect from a beta plugin entering its first public release window.
+
 ## [v1.0.19-beta] — 2026-05-17
 
 ### Added

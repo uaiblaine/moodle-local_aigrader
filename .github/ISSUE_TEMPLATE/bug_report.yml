@@ -1,0 +1,116 @@
+name: Bug report
+description: Report a problem with AI Grader Pro
+title: "[bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! Before you continue, a few notes:
+
+        - **Security issues**: please do **not** file them here. See [`SECURITY.md`](../../SECURITY.md).
+        - **Privacy / EU AI Act compliance issues**: file here, but add the `privacy` label.
+        - **Moodle core or AI Subsystem bugs**: those go to <https://moodle.org/security> or
+          the relevant `aiprovider_*` plugin, not here.
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: |
+        From `Site administration → Plugins → Plugins overview`, or the `$plugin->release`
+        field in `version.php`. Example: `v1.0.19-beta`.
+      placeholder: "v1.0.19-beta"
+    validations:
+      required: true
+
+  - type: input
+    id: moodle-version
+    attributes:
+      label: Moodle version
+      description: |
+        From `Site administration → Notifications` (top of the page). Example:
+        `4.5.2+ (Build: 20250115)`. We support Moodle 4.5 LTS and later.
+      placeholder: "4.5.x"
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: "8.2.x"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ai-provider
+    attributes:
+      label: AI provider (Moodle AI Subsystem)
+      description: Which `aiprovider_*` plugin is configured?
+      options:
+        - aiprovider_openai
+        - aiprovider_azureai
+        - aiprovider_ollama
+        - other (please describe in "additional context")
+        - not relevant to this bug
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. What did you expect, what did you actually see?
+      placeholder: |
+        Expected: After clicking "Aprobar y publicar" the grade should appear in the gradebook.
+        Actual: Page redirects to manage.php but the gradebook entry is missing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal sequence of clicks / actions that triggers the bug.
+      placeholder: |
+        1. Go to `/local/aigrader/manage.php?cmid=...`
+        2. Click "Calificar con IA" on a row with status `null`.
+        3. Wait for the task to finish (~5s).
+        4. Click "Revisar".
+        5. Click "Aprobar y publicar".
+        6. Observe gradebook — entry missing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / screenshots
+      description: |
+        Paste any relevant entries from:
+        - `Site administration → Reports → Logs` filtered by the affected user.
+        - The Moodle error log (`error_log`, Apache/nginx logs).
+        - The `local_aigrader_grading_log` table for the affected submission (`SELECT * FROM mdl_local_aigrader_grading_log WHERE submission_id = ...`).
+        - Screenshots of the manage.php / review.php pages if UI-related.
+      render: text
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How severe is this?
+      options:
+        - "🔴 Critical — data loss, wrong grade in gradebook, security"
+        - "🟠 High — feature broken, blocks pilot usage"
+        - "🟡 Medium — workaround exists, annoying"
+        - "🟢 Low — cosmetic / minor"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: |
+        Anything else worth knowing — site theme, multisite/single, course format,
+        unusual cohort sizes, etc.

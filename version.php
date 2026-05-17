@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051714;           // YYYYMMDDXX. v1.0.19: ship Plugin Directory listing screenshots (5 JPEGs in docs/screenshots/).
+$plugin->version   = 2026051715;           // YYYYMMDDXX. v1.0.20: pre-submission engineering hygiene — CI workflow, SECURITY, CONTRIBUTING, issue/PR templates.
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.19-beta';
+$plugin->release   = 'v1.0.20-beta';

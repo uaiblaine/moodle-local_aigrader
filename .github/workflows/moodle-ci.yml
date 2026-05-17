@@ -1,0 +1,142 @@
+# Moodle Plugin CI for local_aigrader.
+#
+# Mirrors the checks the Plugin Directory peer reviewers run (and a few
+# more) against every push and PR. Runs across the Moodle versions the
+# plugin claims to support (4.5 LTS being the minimum per version.php).
+#
+# We use moodlehq/moodle-plugin-ci which is the canonical action for
+# Moodle plugins — it spins up a matching Moodle, MySQL/PostgreSQL,
+# installs the plugin, and runs phpcs, phpmd, phpdoc, phpunit, behat,
+# mustache lint, savepoints check, plugin metadata validation, etc.
+#
+# Maintained by Moodle HQ:
+#   https://github.com/moodlehq/moodle-plugin-ci
+
+name: Moodle Plugin CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: 'postgres'
+          POSTGRES_HOST_AUTH_METHOD: 'trust'
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=8
+
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_USER: 'root'
+          MYSQL_ALLOW_EMPTY_PASSWORD: "true"
+          MYSQL_CHARACTER_SET_SERVER: "utf8mb4"
+          MYSQL_COLLATION_SERVER: "utf8mb4_unicode_ci"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=8
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # 4.5 is the minimum the plugin requires (see version.php).
+        # MOODLE_405_STABLE = Moodle 4.5 LTS line, MOODLE_500_STABLE = 5.0
+        # (next major). We test both so the plugin stays compatible
+        # forward as well.
+        php: ['8.1', '8.2', '8.3']
+        moodle-branch: ['MOODLE_405_STABLE', 'MOODLE_500_STABLE']
+        database: ['pgsql', 'mariadb']
+        exclude:
+          # PHP 8.3 only required for Moodle 5.0+.
+          - php: '8.3'
+            moodle-branch: 'MOODLE_405_STABLE'
+          # Moodle 5.0 dropped PHP 8.1.
+          - php: '8.1'
+            moodle-branch: 'MOODLE_500_STABLE'
+
+    steps:
+      - name: Check out plugin code
+        uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - name: Set up PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: zip, gd, soap, intl, ldap, mbstring, pgsql, mysqli, xmlrpc
+          ini-values: max_input_vars=5000
+          coverage: none
+
+      - name: Initialise moodle-plugin-ci
+        run: |
+          composer create-project -n --no-dev --prefer-dist moodlehq/moodle-plugin-ci ci ^4
+          # Tell PHP where Composer's vendor/bin lives.
+          echo $(cd ci/bin; pwd) >> $GITHUB_PATH
+          echo $(cd ci/vendor/bin; pwd) >> $GITHUB_PATH
+          sudo locale-gen en_AU.UTF-8
+          echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_ENV
+
+      - name: Install Moodle + plugin
+        run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
+        env:
+          DB: ${{ matrix.database }}
+          MOODLE_BRANCH: ${{ matrix.moodle-branch }}
+
+      - name: PHP Lint
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phplint
+
+      - name: PHP Mess Detector
+        continue-on-error: true
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpmd
+
+      - name: Moodle Code Checker
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpcs --max-warnings 0
+
+      - name: Moodle PHPDoc Checker
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpdoc --max-warnings 0
+
+      - name: Validating
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci validate
+
+      - name: Check upgrade savepoints
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci savepoints
+
+      - name: Mustache Lint
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci mustache
+
+      - name: Grunt
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci grunt --max-lint-warnings 0
+
+      - name: PHPUnit tests
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpunit --fail-on-warning
+
+      - name: Behat features
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci behat --profile chrome

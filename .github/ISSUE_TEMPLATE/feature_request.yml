@@ -1,0 +1,84 @@
+name: Feature request
+description: Suggest an idea for AI Grader Pro
+title: "[feature] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! A few things worth checking before you file:
+
+        - The plugin is intentionally small and opinionated. We say no often.
+          See [`CONTRIBUTING.md`](../../CONTRIBUTING.md) ("What we are unlikely to accept")
+          to save your time.
+        - In particular: **auto-publish features** (anything that lets the AI write
+          a grade without an explicit teacher click) are out of scope and will be
+          declined — the human-in-the-loop guarantee is the plugin's core contract.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: |
+        Describe the situation as a teacher / admin / student would experience it.
+        Avoid jumping straight to a solution — we want to understand the pain first.
+      placeholder: |
+        As a teacher with 40 students, when I review proposals I keep losing track
+        of which submissions I've already approved vs. ones I'm still reviewing.
+        The current status badges help but...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: What would a good solution look like?
+      description: |
+        Optional — if you have an idea, sketch it here. Be concrete (UI / behaviour /
+        URL changes) but don't worry about how it'd be implemented.
+      placeholder: |
+        A filter on manage.php that hides rows in "published" state by default, with
+        a toggle to show them again.
+
+  - type: dropdown
+    id: who-benefits
+    attributes:
+      label: Who benefits most?
+      multiple: true
+      options:
+        - Teacher (the most common user)
+        - Course coordinator / department admin
+        - Site administrator
+        - Student (indirectly — better feedback / faster turnaround)
+        - Compliance officer (EU AI Act / GDPR)
+        - Developer integrating with the plugin
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: |
+        Workarounds you tried, existing Moodle features that almost solve it,
+        other plugins that get part-way there.
+
+  - type: dropdown
+    id: would-help-pilot
+    attributes:
+      label: Would this help you adopt the plugin in production?
+      options:
+        - "Yes — blocker; I can't pilot without it"
+        - "Yes — strongly preferred, but I can live without it"
+        - "Nice to have"
+        - "Curious / academic interest"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: |
+        Screenshots, sketches, links to other tools that do this well, cohort
+        size, course format you use, etc.

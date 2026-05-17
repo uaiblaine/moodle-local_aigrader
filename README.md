@@ -6,6 +6,7 @@ Language Model accessed through Moodle's AI Subsystem; the teacher reviews,
 edits if needed, and decides whether to publish. Nothing reaches the
 gradebook without an explicit teacher click.
 
+[![CI](https://github.com/HernanDiaz/moodle-local_aigrader/actions/workflows/moodle-ci.yml/badge.svg)](https://github.com/HernanDiaz/moodle-local_aigrader/actions/workflows/moodle-ci.yml)
 [![Tests](https://img.shields.io/badge/PHPUnit-85%20tests%20passing-brightgreen)](#tests)
 [![Code style](https://img.shields.io/badge/phpcs-0%20errors-brightgreen)](#code-quality)
 [![Languages](https://img.shields.io/badge/i18n-5%20languages-blue)](#features)
