@@ -215,8 +215,65 @@ if ($haspending) {
 // never reach this page (capability local/aigrader:use is checked above).
 echo \local_aigrader\output\error_banner::render($rows, $cmid);
 
+// -------------------------------------------------------------------.
+// Bulk actions form. Wraps the table so the teacher can apply one
+// action ("Publicar tal cual", "Calificar con IA", …) to many rows in
+// one click. POSTs to bulk.php which classifies, optionally shows a
+// confirmation page for destructive actions, and dispatches to the
+// bulk dispatcher.
+// -------------------------------------------------------------------.
+$bulkactions = [
+    ''                                                       => get_string('bulk_action_choose', 'local_aigrader'),
+    \local_aigrader\bulk\dispatcher::ACTION_APPROVE_PUBLISH => get_string('bulk_action_approve_publish', 'local_aigrader'),
+    \local_aigrader\bulk\dispatcher::ACTION_GRADE_AI       => get_string('bulk_action_grade_ai', 'local_aigrader'),
+    \local_aigrader\bulk\dispatcher::ACTION_REGRADE_AI     => get_string('bulk_action_regrade_ai', 'local_aigrader'),
+    \local_aigrader\bulk\dispatcher::ACTION_MARK_MANUAL    => get_string('bulk_action_mark_manual', 'local_aigrader'),
+];
+
+// Render the bulk form OUTSIDE the table (not wrapping it) so the per-row
+// "Recalificar con IA" forms below are not illegally nested. The row
+// checkboxes inside the table use HTML5's `form="aigrader-bulk-form"`
+// attribute to participate in this form even though they live outside it.
+echo html_writer::start_tag('form', [
+    'method' => 'post',
+    'action' => (new moodle_url('/local/aigrader/bulk.php'))->out(false),
+    'id'     => 'aigrader-bulk-form',
+    'class'  => 'mb-3',
+]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'cmid',    'value' => $cmid]);
+
+echo html_writer::start_div('aigrader-bulk-bar d-flex align-items-center gap-2 mb-2');
+echo html_writer::tag('label', get_string('bulk_label_with_selected', 'local_aigrader'),
+    ['for' => 'aigrader-bulk-action', 'class' => 'form-label mb-0']);
+
+$selecthtml = html_writer::start_tag('select', [
+    'name'  => 'action',
+    'id'    => 'aigrader-bulk-action',
+    'class' => 'form-select',
+    'style' => 'max-width: 280px;',
+]);
+foreach ($bulkactions as $value => $label) {
+    $selecthtml .= html_writer::tag('option', s($label), ['value' => $value]);
+}
+$selecthtml .= html_writer::end_tag('select');
+echo $selecthtml;
+
+echo html_writer::tag('button', get_string('bulk_apply', 'local_aigrader'), [
+    'type'  => 'submit',
+    'class' => 'btn btn-primary',
+]);
+echo html_writer::end_div();
+echo html_writer::end_tag('form');
+
 $table = new html_table();
+$selectallhtml = html_writer::empty_tag('input', [
+    'type'       => 'checkbox',
+    'id'         => 'aigrader-select-all',
+    'aria-label' => get_string('bulk_select_all', 'local_aigrader'),
+]);
 $table->head = [
+    $selectallhtml,
     get_string('th_student', 'local_aigrader'),
     get_string('th_submitted', 'local_aigrader'),
     get_string('th_status', 'local_aigrader'),
@@ -231,6 +288,19 @@ foreach ($rows as $r) {
     $submitted = $r->submitted_at ? userdate($r->submitted_at, get_string('strftimedatetimeshort')) : '-';
     $status    = local_aigrader_render_status($r->ai_status, $r->error_message);
     $grade     = $r->proposed_grade !== null ? format_float($r->proposed_grade, 2) . ' / 10' : '-';
+
+    // form="aigrader-bulk-form" associates this checkbox with the bulk
+    // form rendered above, so it participates in the bulk POST even
+    // though it lives inside the per-row table cell (which can't be
+    // wrapped in <form> without breaking the per-row enqueue button).
+    $checkbox = html_writer::empty_tag('input', [
+        'type'       => 'checkbox',
+        'name'       => 'ids[]',
+        'value'      => $r->submissionid,
+        'form'       => 'aigrader-bulk-form',
+        'class'      => 'aigrader-row-check',
+        'aria-label' => get_string('bulk_select_row', 'local_aigrader', $student),
+    ]);
 
     // Build action: trigger or re-trigger button.
     $btnlabel = ($r->ai_status === null)
@@ -281,10 +351,21 @@ foreach ($rows as $r) {
         $action .= html_writer::span(get_string('btn_pending', 'local_aigrader'), 'text-muted');
     }
 
-    $table->data[] = [$student, $submitted, $status, $grade, $action];
+    $table->data[] = [$checkbox, $student, $submitted, $status, $grade, $action];
 }
 
 echo html_writer::table($table);
+
+// Tiny inline JS for the "select all" checkbox. No AMD module needed for
+// this; it's a five-line behavior that only touches checkboxes inside the
+// bulk form.
+$PAGE->requires->js_init_code(<<<'JS'
+    document.getElementById('aigrader-select-all')?.addEventListener('change', function(e) {
+        document.querySelectorAll('.aigrader-row-check').forEach(function(c) {
+            c.checked = e.target.checked;
+        });
+    });
+JS);
 
 // Quick-link footer.
 echo html_writer::div(

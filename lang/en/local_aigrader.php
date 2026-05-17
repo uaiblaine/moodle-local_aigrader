@@ -236,3 +236,56 @@ $string['err_parse_error_action']   = 'Use "Retry now" to call the model again. 
 $string['err_unknown_headline'] = 'AI grading failed';
 $string['err_unknown_body']     = 'The provider returned an error: {$a}';
 $string['err_unknown_action']   = 'See the audit log for full details, then try again.';
+
+// -----------------------------------------------------------------------.
+// Bulk actions (manage.php "With selected..." selector + bulk.php).
+// -----------------------------------------------------------------------.
+
+// Action bar.
+$string['bulk_label_with_selected'] = 'With selected:';
+$string['bulk_apply']               = 'Apply';
+$string['bulk_select_all']          = 'Select all rows';
+$string['bulk_select_row']          = 'Select submission by {$a}';
+
+// Dropdown options.
+$string['bulk_action_choose']          = '-- Choose an action --';
+$string['bulk_action_approve_publish'] = 'Publish proposed grade as-is';
+$string['bulk_action_grade_ai']        = 'Grade with AI (no existing proposal)';
+$string['bulk_action_regrade_ai']      = 'Re-grade with AI (overwrites proposal)';
+$string['bulk_action_mark_manual']     = 'Mark for manual review';
+
+// Confirmation warnings.
+$string['bulk_warning_approve_publish'] = 'You are about to publish the AI proposed grades as-is, without editing. Grades will be written to the gradebook and students will be notified according to the assignment settings. This action cannot be undone in bulk.';
+$string['bulk_warning_grade_ai']        = 'You are about to run the AI on selected submissions that do not yet have a proposal. Each one consumes tokens from the configured provider.';
+$string['bulk_warning_regrade_ai']      = 'You are about to re-grade with AI, overwriting current proposals. Any unpublished teacher edits on previous proposals will be lost.';
+$string['bulk_warning_mark_manual']     = 'You are about to mark selected submissions as manually reviewed. The AI proposal is kept but ignored; you will need to set the grade by hand from Review.';
+
+// Confirm buttons.
+$string['bulk_confirm_button_approve_publish'] = 'Yes, publish';
+$string['bulk_confirm_button_grade_ai']        = 'Yes, grade';
+$string['bulk_confirm_button_regrade_ai']      = 'Yes, re-grade';
+$string['bulk_confirm_button_mark_manual']     = 'Yes, mark manual';
+
+// Confirmation page.
+$string['bulk_confirm_pagetitle']       = 'AI Grader Pro · Confirm action';
+$string['bulk_confirm_count']           = 'submissions will be processed.';
+$string['bulk_confirm_skipped_header']  = 'Will be skipped:';
+
+// Errors / validation.
+$string['bulk_no_selection']            = 'No submissions selected.';
+$string['errorinvalidaction']           = 'Invalid bulk action: {$a}';
+
+// Post-execution summary (redirect toast).
+$string['bulk_done_ok']                 = '{$a} submissions processed';
+$string['bulk_done_queued']             = '{$a} submissions queued (cron will finish them)';
+$string['bulk_done_skipped']            = '{$a} skipped';
+$string['bulk_done_errors']             = '{$a} with errors';
+
+// Skip reasons mapped to skip:<reason>.
+$string['bulk_skip_already_published'] = 'Already published';
+$string['bulk_skip_already_proposed']  = 'Already have an AI proposal (use Re-grade)';
+$string['bulk_skip_in_flight']         = 'AI grading is in progress';
+$string['bulk_skip_unsupported']       = 'Unsupported file format (upload a valid file first)';
+$string['bulk_skip_no_proposal']       = 'No AI proposal (use Grade with AI first)';
+$string['bulk_skip_no_change']         = 'No AI status yet (nothing to mark)';
+$string['bulk_skip_unknown_action']    = 'Unknown action';

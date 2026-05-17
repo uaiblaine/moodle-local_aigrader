@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_aigrader';     // Frankenstyle name.
-$plugin->version   = 2026051606;           // YYYYMMDDXX. v1.0.4: + synchronous teacher-triggered grading (no more "next cron tick" wait).
+$plugin->version   = 2026051700;           // YYYYMMDDXX. v1.0.5: bulk actions on manage page (approve_publish / grade_ai / regrade_ai / mark_manual).
 $plugin->requires  = 2024100700;           // Moodle 4.5.0 minimum.
 $plugin->maturity  = MATURITY_BETA;        // Pilot-ready.
-$plugin->release   = 'v1.0.4-beta';
+$plugin->release   = 'v1.0.5-beta';

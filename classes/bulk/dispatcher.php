@@ -1,0 +1,365 @@
+<?php
+// This file is part of Moodle - https://moodle.org/.
+//
+// Moodle is free software: you can redistribute it and/or modify.
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the.
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Bulk action dispatcher for the AI Grader Pro manage screen.
+ *
+ * Lets the teacher select N rows in the manage table and apply a single
+ * action to all of them in one click — the standard Moodle "With selected..."
+ * pattern, adapted to the four states (no proposal / ai_proposed / published /
+ * unsupported / error) that local_aigrader rows can be in.
+ *
+ * Two-phase API:
+ *   1. classify($action, $row) — pure, no side effects. Returns 'ok' if the
+ *      row is eligible for the action, or 'skip:<reason>' if not. Used both
+ *      by the confirmation page (to show the teacher "you'll apply X to 22
+ *      rows; 3 will be skipped because Y") and by execute() to guard each
+ *      row before touching it.
+ *   2. execute($action, $rows, $applicable) — runs the action over the
+ *      eligible rows. For LLM-heavy actions (grade_ai / regrade_ai) it
+ *      either runs synchronously in the request (when count <= SYNC_LIMIT)
+ *      or enqueues adhoc tasks (when count > SYNC_LIMIT) so the request
+ *      returns quickly and the cron picks them up.
+ *
+ * @package    local_aigrader
+ * @copyright  2026 Hernán Díaz
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace local_aigrader\bulk;
+
+use local_aigrader\manager;
+/**
+ * Stateless bulk dispatcher.
+ */
+class dispatcher {
+    /** Approve the AI's proposal as-is and publish it to the gradebook. */
+    public const ACTION_APPROVE_PUBLISH = 'approve_publish';
+
+    /** Request a fresh AI grading (only for rows that have never been graded yet). */
+    public const ACTION_GRADE_AI = 'grade_ai';
+
+    /** Re-run AI grading over rows that already have a proposal or errored out. */
+    public const ACTION_REGRADE_AI = 'regrade_ai';
+
+    /** Mark rows for manual grading by clearing the AI proposal status. */
+    public const ACTION_MARK_MANUAL = 'mark_manual';
+
+    /** All recognized actions, in display order for the dropdown. */
+    public const ALL_ACTIONS = [
+        self::ACTION_APPROVE_PUBLISH,
+        self::ACTION_GRADE_AI,
+        self::ACTION_REGRADE_AI,
+        self::ACTION_MARK_MANUAL,
+    ];
+
+    /** Actions that write to the gradebook and need a confirmation step. */
+    public const DESTRUCTIVE_ACTIONS = [
+        self::ACTION_APPROVE_PUBLISH,
+    ];
+
+    /**
+     * Up to this many submissions, run the LLM calls in the current request
+     * (write_close + set_time_limit, ~3-5 s per row). Above this threshold
+     * we enqueue adhoc tasks so the request returns immediately. The cutoff
+     * is conservative — most demos sit at 1-3 rows; a teacher pushing 30 at
+     * once should not lock the page tab open for a minute.
+     */
+    public const SYNC_LIMIT = 5;
+
+    /** Classification result: row will be processed. */
+    public const RESULT_OK = 'ok';
+
+    /** Classification result prefix. Full value is e.g. 'skip:already_published'. */
+    public const RESULT_SKIP_PREFIX = 'skip:';
+
+    /**
+     * Decide whether an action applies to a given submission row, without
+     * touching anything. Pure function (modulo $DB reads via the row).
+     *
+     * Returns either self::RESULT_OK or 'skip:<reason_key>'. Reason keys are
+     * stable so the calling UI can map them to localized strings:
+     *
+     *   - skip:no_proposal       — action needs a proposal but the row never ran
+     *   - skip:already_proposed  — action wants a fresh grading but a proposal exists
+     *   - skip:already_published — destructive action would re-publish what's already there
+     *   - skip:in_flight         — task is pending; don't touch
+     *   - skip:unsupported       — file format prevents AI grading
+     *   - skip:no_change         — nothing to mark manual (status NULL)
+     *
+     * @param string $action One of self::ALL_ACTIONS.
+     * @param object $row A row from the manage.php SQL with at least:
+     *                    submissionid, ai_status, proposed_grade.
+     * @return string self::RESULT_OK or "skip:<reason>".
+     */
+    public static function classify(string $action, object $row): string {
+        $status = $row->ai_status ?? null;
+
+        switch ($action) {
+            case self::ACTION_APPROVE_PUBLISH:
+                // Needs a usable proposal to publish.
+                if ($status === 'ai_proposed' || $status === 'teacher_reviewed') {
+                    return self::RESULT_OK;
+                }
+                if ($status === 'published') {
+                    return self::RESULT_SKIP_PREFIX . 'already_published';
+                }
+                if ($status === 'pending_ai') {
+                    return self::RESULT_SKIP_PREFIX . 'in_flight';
+                }
+                if ($status === 'unsupported_format') {
+                    return self::RESULT_SKIP_PREFIX . 'unsupported';
+                }
+                if ($status === 'error') {
+                    return self::RESULT_SKIP_PREFIX . 'no_proposal';
+                }
+                return self::RESULT_SKIP_PREFIX . 'no_proposal'; // status null.
+
+            case self::ACTION_GRADE_AI:
+                // Only run on rows that have never been graded successfully.
+                if ($status === null || $status === 'error') {
+                    return self::RESULT_OK;
+                }
+                if ($status === 'pending_ai') {
+                    return self::RESULT_SKIP_PREFIX . 'in_flight';
+                }
+                if ($status === 'unsupported_format') {
+                    return self::RESULT_SKIP_PREFIX . 'unsupported';
+                }
+                return self::RESULT_SKIP_PREFIX . 'already_proposed';
+
+            case self::ACTION_REGRADE_AI:
+                // Anything that has run before (succeeded or failed) is eligible.
+                if (in_array($status, ['ai_proposed', 'teacher_reviewed', 'published', 'error'], true)) {
+                    return self::RESULT_OK;
+                }
+                if ($status === 'pending_ai') {
+                    return self::RESULT_SKIP_PREFIX . 'in_flight';
+                }
+                if ($status === 'unsupported_format') {
+                    // Re-running won't help — the file format is the blocker. The
+                    // teacher needs to upload a parseable version first.
+                    return self::RESULT_SKIP_PREFIX . 'unsupported';
+                }
+                return self::RESULT_SKIP_PREFIX . 'no_proposal'; // status null.
+
+            case self::ACTION_MARK_MANUAL:
+                // Useful for any row where AI has touched the workflow.
+                if (in_array($status, ['ai_proposed', 'teacher_reviewed', 'error', 'unsupported_format'], true)) {
+                    return self::RESULT_OK;
+                }
+                if ($status === 'pending_ai') {
+                    return self::RESULT_SKIP_PREFIX . 'in_flight';
+                }
+                if ($status === 'published') {
+                    // Already in the gradebook; unpublishing is a separate action.
+                    return self::RESULT_SKIP_PREFIX . 'already_published';
+                }
+                return self::RESULT_SKIP_PREFIX . 'no_change'; // status null.
+
+            default:
+                return self::RESULT_SKIP_PREFIX . 'unknown_action';
+        }
+    }
+
+    /**
+     * Run the chosen action against the eligible rows.
+     *
+     * @param string $action One of self::ALL_ACTIONS.
+     * @param array $rows Rows from the manage.php SQL keyed by submissionid.
+     * @param array $applicable [submissionid => self::classify() return]. The
+     *                          caller has already filtered; we just trust the
+     *                          map and re-validate inside the per-row branch.
+     * @param int|null $synclimit Override SYNC_LIMIT for tests. Null = default.
+     * @return array {
+     *     @type int   ok        Number of rows the action ran on.
+     *     @type int   queued    Number of rows enqueued as adhoc tasks (>= 0).
+     *     @type int   skipped   Number of rows the action did NOT touch.
+     *     @type array errors    [submissionid => error message string]
+     *     @type array skip_reasons [reason_key => count] for the summary banner.
+     * }
+     */
+    public static function execute(string $action, array $rows, array $applicable, ?int $synclimit = null): array {
+        global $USER;
+
+        $synclimit = $synclimit ?? self::SYNC_LIMIT;
+
+        $eligible = [];
+        $skipreasons = [];
+        foreach ($applicable as $sid => $verdict) {
+            if ($verdict === self::RESULT_OK) {
+                $eligible[$sid] = $rows[$sid] ?? null;
+            } else if (str_starts_with($verdict, self::RESULT_SKIP_PREFIX)) {
+                $reason = substr($verdict, strlen(self::RESULT_SKIP_PREFIX));
+                $skipreasons[$reason] = ($skipreasons[$reason] ?? 0) + 1;
+            }
+        }
+        // Drop any null rows (defensive — caller should have filtered already).
+        $eligible = array_filter($eligible);
+
+        $result = [
+            'ok'           => 0,
+            'queued'       => 0,
+            'skipped'      => count($applicable) - count($eligible),
+            'errors'       => [],
+            'skip_reasons' => $skipreasons,
+        ];
+
+        if (empty($eligible)) {
+            return $result;
+        }
+
+        switch ($action) {
+            case self::ACTION_APPROVE_PUBLISH:
+                foreach ($eligible as $sid => $row) {
+                    try {
+                        self::publish_existing_proposal((int) $sid);
+                        $result['ok']++;
+                    } catch (\Throwable $e) {
+                        $result['errors'][(int) $sid] = $e->getMessage();
+                    }
+                }
+                return $result;
+
+            case self::ACTION_GRADE_AI:
+            case self::ACTION_REGRADE_AI:
+                // Below threshold: run inline (best UX for small cohorts).
+                // Above threshold: enqueue tasks (avoid 60s+ request hangs).
+                if (count($eligible) <= $synclimit) {
+                    // Release the session lock so other requests by the same
+                    // user are not serialised behind us, and bump the wall-clock
+                    // limit so a slow LLM doesn't 30s-out mid-loop.
+                    \core\session\manager::write_close();
+                    @set_time_limit(60 + count($eligible) * 30);
+
+                    $mgr = new manager();
+                    foreach ($eligible as $sid => $row) {
+                        $gr = $mgr->grade_submission((int) $sid);
+                        if ($gr->success || $gr->needs_review) {
+                            $result['ok']++;
+                        } else {
+                            $result['errors'][(int) $sid] = (string) $gr->error;
+                        }
+                    }
+                } else {
+                    foreach ($eligible as $sid => $row) {
+                        $task = new \local_aigrader\task\grade_submission();
+                        $task->set_custom_data((object) ['submissionid' => (int) $sid]);
+                        $task->set_userid((int) $USER->id);
+                        \core\task\manager::queue_adhoc_task($task);
+                        $result['queued']++;
+                    }
+                }
+                return $result;
+
+            case self::ACTION_MARK_MANUAL:
+                global $DB;
+                foreach ($eligible as $sid => $row) {
+                    try {
+                        $DB->update_record('local_aigrader_submission', (object) [
+                            'id'           => (int) $row->aigrader_id,
+                            'status'       => 'teacher_reviewed',
+                            'final_grader' => (int) $USER->id,
+                            'timemodified' => time(),
+                        ]);
+                        $result['ok']++;
+                    } catch (\Throwable $e) {
+                        $result['errors'][(int) $sid] = $e->getMessage();
+                    }
+                }
+                return $result;
+        }
+
+        // Unreachable for ALL_ACTIONS; defensive default.
+        $result['errors']['_'] = 'Unknown action: ' . $action;
+        return $result;
+    }
+
+    /**
+     * Publish an existing AI proposal as the official grade, with no
+     * teacher edits. Equivalent to opening review.php and clicking
+     * "Aprobar y publicar" without modifying any field.
+     *
+     * Reuses local_aigrader_publish_grade() from review.php so the same
+     * \assign::save_grade() path is taken — submission_graded event fires,
+     * feedback dispatched to enabled plugins, gradebook entry written by
+     * grader = USER.
+     *
+     * @param int $submissionid The {assign_submission}.id.
+     */
+    private static function publish_existing_proposal(int $submissionid): void {
+        global $DB, $USER, $CFG;
+
+        require_once($CFG->dirroot . '/local/aigrader/review.php');
+        // review.php declares the helpers as plain functions; including it
+        // for the bare side effect of declaring them is what we want here.
+        // The file's top-level code is gated on require/required_param so it
+        // returns control without rendering anything when called from CLI.
+
+        $proposalrow = $DB->get_record(
+            'local_aigrader_submission',
+            ['submissionid' => $submissionid],
+            '*',
+            MUST_EXIST
+        );
+        if (!in_array($proposalrow->status, ['ai_proposed', 'teacher_reviewed'], true)) {
+            throw new \moodle_exception('errornoproposal', 'local_aigrader');
+        }
+
+        $proposed = json_decode((string) $proposalrow->proposed_feedback, true);
+        if (!is_array($proposed)) {
+            throw new \moodle_exception('errorparseproposal', 'local_aigrader');
+        }
+
+        $assign = $DB->get_record('assign', ['id' => $proposalrow->assignid], '*', MUST_EXIST);
+        [$course, $cm] = get_course_and_cm_from_instance($assign->id, 'assign');
+        $context = \context_module::instance($cm->id);
+
+        $finalgrade = (float) ($proposed['final_grade'] ?? 0);
+        $strengths     = (array) ($proposed['strengths'] ?? []);
+        $improvements  = (array) ($proposed['improvements'] ?? []);
+        $justification = (string) ($proposed['justification'] ?? '');
+
+        // 1. Update local_aigrader_submission to 'published' with final_feedback
+        //    matching the proposal (no edits).
+        $finalfeedback = array_merge($proposed, [
+            'final_grade' => round($finalgrade, 2),
+        ]);
+        $now = time();
+        $DB->update_record('local_aigrader_submission', (object) [
+            'id'             => (int) $proposalrow->id,
+            'status'         => 'published',
+            'final_grade'    => round($finalgrade, 2),
+            'final_feedback' => json_encode($finalfeedback, JSON_UNESCAPED_UNICODE),
+            'final_grader'   => (int) $USER->id,
+            'timemodified'   => $now,
+            'timepublished'  => $now,
+        ]);
+
+        // 2. Push to mod_assign / gradebook through the standard API.
+        local_aigrader_publish_grade(
+            course: $course,
+            cm: $cm,
+            context: $context,
+            studentid: (int) $proposalrow->studentid,
+            grade: $finalgrade,
+            feedbackhtml: local_aigrader_format_feedback_html($strengths, $improvements, $justification)
+        );
+
+        // 3. Audit log: this is a bulk "approve" (no edits).
+        local_aigrader_review_log('approve', $proposalrow, $proposed, $finalfeedback);
+    }
+}

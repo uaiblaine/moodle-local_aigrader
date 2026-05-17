@@ -5,6 +5,66 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.5-beta] — 2026-05-17
+
+### Added
+
+- Bulk actions on the manage page (`/local/aigrader/manage.php`):
+  checkbox per row plus a "Con seleccionadas..." dropdown lets the
+  teacher apply one action to N rows in a single click. Solves the
+  click-fest reported by the pilot teacher when reviewing 25+ rows
+  whose AI proposals were correct out of the box.
+- Four bulk actions:
+  - **Publicar tal cual** — approves and publishes the AI proposed
+    grades unchanged; goes through `\assign::save_grade()` so the
+    standard event/feedback/gradebook pipeline runs (same path as the
+    single-row "Aprobar y publicar" in review.php).
+  - **Calificar con IA** — runs the LLM on rows that have never been
+    graded (status NULL or `error`).
+  - **Recalificar con IA** — runs the LLM on rows that already have a
+    proposal or have errored before; overwrites the proposal.
+  - **Marcar para revisión manual** — flips the AI status to
+    `teacher_reviewed` so the row drops out of the AI-pending queue and
+    the teacher grades it by hand in review.php.
+- Hybrid sync/async execution: up to `dispatcher::SYNC_LIMIT` (5) rows
+  the LLM-heavy actions run in the current request with `write_close()`
+  + bumped `set_time_limit()`. Above 5 rows we enqueue adhoc
+  `grade_submission` tasks and tell the teacher to come back when cron
+  finishes. Below 5 the teacher waits ~3-5 s per row inline and gets
+  immediate feedback; above 5 we trade live feedback for not locking
+  the browser tab.
+- Confirmation page for destructive actions (currently only
+  `approve_publish`). Shows row counts, lists which rows will be
+  skipped and why, and gates the action behind an explicit "Sí,
+  publicar" submit. Non-destructive actions run directly.
+- `local_aigrader\bulk\dispatcher` class with stateless `classify()`
+  (action × status eligibility matrix) and `execute()` (orchestrator).
+- 27 PHPUnit tests covering the full eligibility matrix
+  (`bulk_dispatcher_test.php`) — every (action, status) cell is
+  asserted, plus the destructive-actions contract that the UI relies
+  on for the confirmation step.
+
+### Changed
+
+- `manage.php`: header gains a checkbox column; bulk action bar
+  ("Con seleccionadas:" + dropdown + Apply) renders above the table.
+  Per-row "Recalificar con IA" inline form is preserved unchanged;
+  row checkboxes participate in the bulk form via the HTML5 `form="..."`
+  attribute so neither nested forms nor invalid HTML is produced.
+- Tiny inline JS for the "select all" header checkbox (no AMD module
+  needed for five lines that only toggle checkboxes inside the bulk
+  form).
+
+### Notes
+
+- The async path uses the existing `\local_aigrader\task\grade_submission`
+  adhoc task class — no new task class added.
+- Permissions: bulk actions reuse the existing `local/aigrader:use`
+  capability check from `manage.php`; no new capabilities introduced.
+- POST endpoints are CSRF-protected (`require_sesskey()`) and validate
+  that every selected submission belongs to the cmid in the URL
+  (defense-in-depth against tampered forms).
+
 ## [v1.0.4-beta] — 2026-05-16
 
 ### Changed
