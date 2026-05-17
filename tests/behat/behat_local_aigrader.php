@@ -169,9 +169,13 @@ class behat_local_aigrader extends behat_base {
     /**
      * Helper: get the plugin's data generator.
      *
+     * In a Behat context `phpunit_util` is not loaded — that class is the
+     * PHPUnit-side runner only. The cross-runtime equivalent is
+     * `testing_util` which is available under both PHPUnit and Behat.
+     *
      * @return local_aigrader_generator
      */
     private function get_plugin_generator(): local_aigrader_generator {
-        return phpunit_util::get_data_generator()->get_plugin_generator('local_aigrader');
+        return testing_util::get_data_generator()->get_plugin_generator('local_aigrader');
     }
 }

@@ -286,7 +286,7 @@ class local_aigrader_generator extends component_generator_base {
     public function seed_cohort_with_mixed_statuses(array $counts, stdClass $assign): array {
         global $DB;
         $created = [];
-        $generator = phpunit_util::get_data_generator();
+        $generator = testing_util::get_data_generator();
         $coursecat = $DB->get_record('course', ['id' => $assign->course], 'id', MUST_EXIST);
 
         foreach ($counts as $status => $n) {

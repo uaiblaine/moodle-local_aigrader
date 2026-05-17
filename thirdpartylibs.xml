@@ -24,4 +24,16 @@
             <copyright>Symfony Contributors</copyright>
         </copyrights>
     </library>
+    <library>
+        <location>thirdparty/vendor/composer</location>
+        <name>composer/autoload-bootstrap</name>
+        <description>Composer-generated autoloader bootstrap (ClassLoader, InstalledVersions, autoload_*.php) shipped under thirdparty/vendor/. Generated, not authored — declared here so the Moodle code/phpdoc checkers skip it.</description>
+        <version>2.x</version>
+        <license>MIT</license>
+        <repository>https://github.com/composer/composer</repository>
+        <copyrights>
+            <copyright>Nils Adermann</copyright>
+            <copyright>Jordi Boggiano</copyright>
+        </copyrights>
+    </library>
 </libraries>
