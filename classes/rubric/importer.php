@@ -66,6 +66,9 @@ class importer {
 
     /**
      * Convert a gradingform_rubric definition into a human-readable, LLM-friendly text.
+     *
+     * @param \stdClass $definition Decoded gradingform_rubric instance.
+     * @return string Multi-line criteria text suitable for the prompt.
      */
     private static function format_criteria(\stdClass $definition): string {
         $lines = [];
@@ -117,7 +120,10 @@ class importer {
     }
 
     /**
-     * Format score.
+     * Format a rubric score: drop the decimal part if integer, else keep two decimals.
+     *
+     * @param float $score Raw score from the rubric definition.
+     * @return string Pretty-printed score for the criteria text.
      */
     private static function format_score(float $score): string {
         if (fmod($score, 1.0) === 0.0) {

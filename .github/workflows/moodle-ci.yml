@@ -121,14 +121,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci phpcs
 
-      # PHPDoc Checker is informational for v1.x. The codebase still has
-      # ~50 functions whose docblocks are missing one or more @param
-      # tags; a sweep is planned for v1.0.24. Until then, treat the
-      # output as advisory (continue-on-error) so the rest of CI can
-      # still fail/pass on the things that actually matter for Plugin
-      # Directory peer review (errors, tests, behat).
+      # PHPDoc Checker runs strict — after the v1.0.25 docblock sweep, every
+      # function has a complete @param list and a @return tag where applicable.
       - name: Moodle PHPDoc Checker
-        continue-on-error: true
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci phpdoc
 

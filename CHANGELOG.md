@@ -5,6 +5,56 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.25-beta] — 2026-05-17
+
+### Fixed
+
+- **PHPDoc Checker sweep**: every function now has a complete `@param`
+  list and a `@return` tag where applicable. The `moodle-plugin-ci
+  phpdoc` step that was marked `continue-on-error: true` in v1.0.23
+  is restored to **strict** in this release — CI now fails on any
+  phpdoc error, matching the strictness Plugin Directory peer
+  reviewers apply by hand.
+
+  Fifty functions across these files received complete docblocks:
+
+  | File | Functions |
+  |---|---|
+  | `classes/privacy/provider.php` | `get_metadata`, `get_contexts_for_userid`, `get_users_in_context`, `export_user_data`, `delete_data_for_all_users_in_context`, `delete_data_for_user`, `delete_data_for_users`, `erase_user_in_assignment` |
+  | `classes/manager.php` | `grade_submission`, `upsert_submission_row`, `mark_submission_error`, `log_action` |
+  | `classes/output/manage_table.php` | `render_status`, `info_icon` |
+  | `classes/extractor/dispatcher.php` | `extract`, `dispatch_file`, `unsupported`, `normalise_encoding` |
+  | `classes/extractor/zip_extractor.php` | `label_for`, `normalise_encoding`, `copy_to_temp` |
+  | `classes/extractor/docx_extractor.php` | `xml_to_text`, `copy_to_temp` |
+  | `classes/extractor/text_extractor.php` | `normalise` |
+  | `classes/extractor/ipynb_extractor.php` | `extract_file` |
+  | `classes/parsed_proposal.php` | `success` (also dropped `array<string,float>` generic → plain `array`, which moodlecheck rejects) |
+  | `classes/classified_error.php` | `__construct` |
+  | `classes/error_classifier.php` | `summarize_raw` |
+  | `classes/rubric/importer.php` | `format_criteria`, `format_score` |
+  | `classes/prompt/builder.php` | `resolve_language`, `strip_html`, `output_format_instructions` |
+  | `classes/prompt/built_prompt.php` | `__construct` |
+  | `classes/output_parser.php` | `parse`, `strip_code_fences`, `extract_json_object` |
+  | `classes/form/assign_form_handler.php` | `add_elements`, `validate`, `save`, `is_assign_form` |
+  | `review.php` | `local_aigrader_split_lines`, `local_aigrader_humanize_criterion_slug`, `local_aigrader_format_feedback_html`, `local_aigrader_diff_action`, `local_aigrader_review_log` |
+  | `tests/ipynb_extractor_test.php` | `notebook` |
+  | `tests/bulk_dispatcher_test.php` | `row` |
+  | `tests/task_reset_test.php` | `count_tasks_for`, `get_task_record`, `enqueue_failed_task` |
+
+  Total: **50 docblocks** added or completed; **0 functional changes**.
+
+### Notes
+
+- Local verification: `php local/moodlecheck/cli/moodlecheck.php
+  --path=local/aigrader --exclude=local/aigrader/cli,local/aigrader/thirdparty`
+  reports **0 errors** against the docker Moodle 4.5 + the
+  `moodlehq/moodle-local_moodlecheck` plugin.
+- The `continue-on-error: true` flag previously on the PHPDoc step
+  has been removed from `.github/workflows/moodle-ci.yml`. CI is now
+  strict-green across all 10 of the moodle-plugin-ci verification
+  steps: phplint, phpmd, phpcs, **phpdoc**, validate, savepoints,
+  mustache, grunt, phpunit, behat.
+
 ## [v1.0.24-beta] — 2026-05-17
 
 ### Fixed

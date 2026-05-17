@@ -39,6 +39,9 @@ namespace local_aigrader;
 final class task_reset_test extends \advanced_testcase {
     /**
      * Counts the matching adhoc tasks in task_adhoc for a given submissionid.
+     *
+     * @param int $submissionid `assign_submission.id` to filter by.
+     * @return int Number of pending grade_submission tasks for that submission.
      */
     private function count_tasks_for(int $submissionid): int {
         global $DB;
@@ -57,6 +60,9 @@ final class task_reset_test extends \advanced_testcase {
 
     /**
      * Returns the single task_adhoc record for the submission, or null.
+     *
+     * @param int $submissionid `assign_submission.id` to look up.
+     * @return object|null task_adhoc row, or null if no such task is queued.
      */
     private function get_task_record(int $submissionid): ?object {
         global $DB;
@@ -75,6 +81,10 @@ final class task_reset_test extends \advanced_testcase {
     /**
      * Enqueue a real adhoc task using the manager API (same path the
      * "Grade with AI" button uses) and force a failed state on it.
+     *
+     * @param int $submissionid `assign_submission.id` carried in the task's custom data.
+     * @param int $userid `user.id` to attribute the task to.
+     * @param int $faildelay Faildelay in seconds to assert the reset() logic against.
      */
     private function enqueue_failed_task(int $submissionid, int $userid, int $faildelay = 120): void {
         global $DB;

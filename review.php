@@ -570,6 +570,9 @@ echo $OUTPUT->footer();
 
 /**
  * Split a textarea value (one item per line) into a clean array.
+ *
+ * @param string $text Raw textarea content.
+ * @return array Trimmed, non-empty lines as a re-indexed array of strings.
  */
 function local_aigrader_split_lines(string $text): array {
     $parts = preg_split('/\r?\n/', $text);
@@ -587,6 +590,9 @@ function local_aigrader_split_lines(string $text): array {
  * uppercase the first letter, leave the rest as-is.
  *
  * Defensive against empty / whitespace-only input.
+ *
+ * @param string $slug Snake_case slug from the LLM's `criterion_scores` keys.
+ * @return string Human-readable label, or '' for empty input.
  */
 function local_aigrader_humanize_criterion_slug(string $slug): string {
     $clean = trim($slug);
@@ -600,6 +606,12 @@ function local_aigrader_humanize_criterion_slug(string $slug): string {
  * Build the HTML feedback shown to the student in the gradebook.
  * Per ADR-001 section 8.2 the student does not see IA branding by default;
  * the teacher takes pedagogical and legal ownership of the feedback.
+ *
+ * @param array $strengths Bullet points to surface under "Aciertos".
+ * @param array $improvements Bullet points to surface under "Mejorables".
+ * @param string $justification Free-text justification appended at the end.
+ * @return string HTML safe to store in `assign_grades.feedback` /
+ *                `assignfeedback_comments.commenttext`.
  */
 function local_aigrader_format_feedback_html(array $strengths, array $improvements, string $justification): string {
     $html = '';
@@ -704,6 +716,10 @@ function local_aigrader_publish_grade(
 /**
  * Decide whether the teacher made meaningful changes to the AI proposal,
  * for logging purposes (action='edit' vs 'approve').
+ *
+ * @param array $proposed Original AI proposal payload.
+ * @param array $final Final form values the teacher submitted.
+ * @return string 'edit' if anything material changed, 'approve' otherwise.
  */
 function local_aigrader_diff_action(array $proposed, array $final): string {
     if (round((float) ($proposed['final_grade'] ?? 0), 2) !== round((float) ($final['final_grade'] ?? 0), 2)) {
@@ -722,6 +738,11 @@ function local_aigrader_diff_action(array $proposed, array $final): string {
 
 /**
  * Write an entry to local_aigrader_log for a teacher review action.
+ *
+ * @param string $action Audit action: 'approve', 'edit', 'save_draft', 'reject'.
+ * @param \stdClass $proposalrow Existing local_aigrader_submission row.
+ * @param array|null $proposed Original AI proposal (used to compute the edit diff).
+ * @param array|null $final Final values the teacher published / saved (null on reject).
  */
 function local_aigrader_review_log(string $action, \stdClass $proposalrow, ?array $proposed, ?array $final): void {
     global $DB, $USER;

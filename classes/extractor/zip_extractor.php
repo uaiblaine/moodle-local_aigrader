@@ -158,7 +158,11 @@ class zip_extractor {
     }
 
     /**
-     * Label for.
+     * Friendly label for a file inside the zip, based on its name and extension.
+     *
+     * @param string $name Entry name (filename inside the zip).
+     * @param string $ext Lower-case extension without the dot (e.g. "py").
+     * @return string Human label used as section header in the extracted text.
      */
     private static function label_for(string $name, string $ext): string {
         $codemap = [
@@ -182,7 +186,10 @@ class zip_extractor {
     }
 
     /**
-     * Normalise encoding.
+     * Normalise file content to UTF-8 (best-effort).
+     *
+     * @param string $content Raw bytes read from a zip entry.
+     * @return string UTF-8 string suitable for inclusion in the prompt.
      */
     private static function normalise_encoding(string $content): string {
         $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
@@ -193,7 +200,10 @@ class zip_extractor {
     }
 
     /**
-     * Copy to temp.
+     * Copy a stored_file to a temp filesystem path so ZipArchive can open it.
+     *
+     * @param \stored_file $file Source stored file (the submitted zip).
+     * @return string|null Temp path, or null on copy failure.
      */
     private static function copy_to_temp(\stored_file $file): ?string {
         try {

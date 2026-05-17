@@ -77,6 +77,9 @@ class text_extractor implements extractor_interface {
      * - Strips remaining tags.
      * - Decodes HTML entities.
      * - Normalises whitespace.
+     *
+     * @param string $html Raw HTML from the online-text submission editor.
+     * @return string Plain-text version safe to embed in the LLM prompt.
      */
     private static function normalise(string $html): string {
         // Replace common block tags with newlines BEFORE strip_tags so we don't.

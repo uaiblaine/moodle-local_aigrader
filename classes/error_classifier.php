@@ -206,6 +206,9 @@ class error_classifier {
      * Trim a long raw error for display in compact contexts (badge tooltip,
      * per-row table cell). Drops Groq's billing URL marketing tail and caps
      * at 200 chars.
+     *
+     * @param string $raw Raw error message from the AI Subsystem.
+     * @return string Trimmed summary safe to render in badges.
      */
     public static function summarize_raw(string $raw): string {
         // Drop any tail like "...Need more tokens? Upgrade to Dev Tier at https://...".

@@ -40,8 +40,8 @@ final class ipynb_extractor_test extends \advanced_testcase {
     /**
      * Build a minimal valid notebook JSON given a list of cells.
      *
-     * @param array<int,array<string,mixed>> $cells
-     * @param string $language
+     * @param array $cells Cell dicts as the ipynb spec defines them.
+     * @param string $language Kernel language (default python).
      * @return string Notebook JSON.
      */
     private function notebook(array $cells, string $language = 'python'): string {

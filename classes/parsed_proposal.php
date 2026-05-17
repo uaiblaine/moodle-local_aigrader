@@ -78,9 +78,9 @@ class parsed_proposal {
      * Build a successful result.
      *
      * @param float $grade Final grade on a 0-10 scale.
-     * @param array<string,float> $criterionscores Map of slug => score.
-     * @param string[] $strengths Positive points.
-     * @param string[] $improvements Areas to improve.
+     * @param array $criterionscores Map of slug => float score.
+     * @param array $strengths Positive points (array of strings).
+     * @param array $improvements Areas to improve (array of strings).
      * @param string $justification Free-text justification.
      * @param string $language ISO language code of the textual fields.
      * @param string $cleanedjson The JSON that was successfully parsed.

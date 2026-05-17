@@ -37,7 +37,13 @@ use local_aigrader\prompt\built_prompt;
  */
 class manager {
     /**
-     * Grade submission.
+     * Run the end-to-end grading pipeline for a single submission.
+     *
+     * Steps: preflight extractor → build prompt → call AI Subsystem →
+     * parse JSON → persist proposal → append audit log.
+     *
+     * @param int $submissionid `assign_submission.id` of the submission to grade.
+     * @return grading_result Outcome value object (success / error / needs_review).
      */
     public function grade_submission(int $submissionid): grading_result {
         global $DB, $USER;
@@ -173,6 +179,10 @@ class manager {
 
     /**
      * Insert or update the local_aigrader_submission row, returning its id.
+     *
+     * @param built_prompt $prompt The built prompt carrying submission metadata.
+     * @param string $status One of the local_aigrader_submission status values.
+     * @return int Persisted row id.
      */
     private static function upsert_submission_row(built_prompt $prompt, string $status): int {
         global $DB;
@@ -201,7 +211,10 @@ class manager {
     }
 
     /**
-     * Mark submission error.
+     * Move a local_aigrader_submission row to status=error with a reason.
+     *
+     * @param int $localid Row id from local_aigrader_submission.
+     * @param string $message Human-readable error message stored in error_message.
      */
     private static function mark_submission_error(int $localid, string $message): void {
         global $DB;
@@ -262,6 +275,14 @@ class manager {
 
     /**
      * Write an entry to local_aigrader_log. Returns its id.
+     *
+     * @param string $action Audit action: grade | regrade | edit | approve | save_draft | reject.
+     * @param built_prompt $prompt The built prompt (used for hash, model, submission metadata).
+     * @param parsed_proposal|null $proposal Parsed result, or null if the call failed before parse.
+     * @param object|null $response Raw `\core_ai\aiactions\response` (or null on early failure).
+     * @param string|null $error Error message if the action failed, else null.
+     * @param int $durationms Wall-clock duration of the AI call in milliseconds.
+     * @return int Inserted row id from local_aigrader_log.
      */
     private static function log_action(
         string $action,

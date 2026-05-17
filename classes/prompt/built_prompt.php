@@ -46,7 +46,7 @@ class built_prompt {
      *
      * @param string $system System message content.
      * @param string $user User message content.
-     * @param array<string,mixed> $metadata Optional metadata map.
+     * @param array $metadata Optional metadata map (string key => mixed value).
      */
     public function __construct(string $system, string $user, array $metadata = []) {
         $this->system_message = $system;

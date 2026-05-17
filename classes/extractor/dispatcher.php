@@ -47,7 +47,11 @@ class dispatcher implements extractor_interface {
     private const MAX_PER_FILE = 200000;
 
     /**
-     * Extract.
+     * Extract a concatenated text representation of every uploaded file
+     * attached to a submission.
+     *
+     * @param int $submissionid `assign_submission.id` to inspect.
+     * @return extraction_result Aggregated result with text, format, warnings or error.
      */
     public static function extract(int $submissionid): extraction_result {
         global $DB;
@@ -179,7 +183,8 @@ class dispatcher implements extractor_interface {
     /**
      * Route a single stored_file to its appropriate extractor.
      *
-     * @return array{header: string, text: string, format: string, warnings: string[]}|null
+     * @param \stored_file $file File submitted by the student.
+     * @return array|null Keys header, text, format, warnings — or null if not extractable.
      */
     private static function dispatch_file(\stored_file $file): ?array {
         $filename = $file->get_filename();
@@ -293,6 +298,10 @@ class dispatcher implements extractor_interface {
      * because they are part of the prompt sent to the LLM (which works
      * better with English markers in the model's instruction-following
      * training). The warning surfaced in the teacher UI is localised.
+     *
+     * @param string $filename Filename to surface in the section header.
+     * @param string $reason Short English reason (also surfaced to the teacher).
+     * @return array Entry with keys header, text, format, warnings.
      */
     private static function unsupported(string $filename, string $reason): array {
         $marker = get_string('extract_skip_marker', 'local_aigrader');
@@ -305,7 +314,10 @@ class dispatcher implements extractor_interface {
     }
 
     /**
-     * Normalise encoding.
+     * Normalise file content to UTF-8 (best-effort).
+     *
+     * @param string $content Raw bytes read from the submitted file.
+     * @return string UTF-8 string suitable for inclusion in the prompt.
      */
     private static function normalise_encoding(string $content): string {
         $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);

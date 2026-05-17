@@ -162,6 +162,10 @@ EOT;
      *   2. course.lang
      *   3. site default lang
      *   4. 'en' fallback
+     *
+     * @param \stdClass $config Per-assignment config row (local_aigrader_assign).
+     * @param \stdClass $assign Assignment row (assign).
+     * @return string ISO language code (e.g. 'es', 'en').
      */
     private static function resolve_language(\stdClass $config, \stdClass $assign): string {
         if (!empty($config->language_override)) {
@@ -181,6 +185,9 @@ EOT;
 
     /**
      * Strip HTML from an assignment intro without losing paragraph breaks.
+     *
+     * @param string $html Raw HTML from `assign.intro`.
+     * @return string Plain text suitable for the prompt body.
      */
     private static function strip_html(string $html): string {
         $html = preg_replace('#</(p|div|li|h[1-6]|tr)>#i', "\n", $html);
@@ -193,6 +200,9 @@ EOT;
 
     /**
      * JSON output format that the LLM must return.
+     *
+     * @param string $language ISO code that the LLM should write the textual fields in.
+     * @return string Multi-line instruction block to append to the prompt.
      */
     private static function output_format_instructions(string $language): string {
         return <<<EOT

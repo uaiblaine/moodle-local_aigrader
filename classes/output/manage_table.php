@@ -277,6 +277,10 @@ class manage_table extends \table_sql {
      * info icon carrying the long detail. The text-white classes are spelled
      * out because some themes (notably Moove) don't apply Bootstrap 5's
      * "white text on dark badge" rule automatically.
+     *
+     * @param string|null $status One of the local_aigrader_submission status values, or null.
+     * @param string|null $errormsg Error context when status is `error` or `unsupported_format`.
+     * @return string HTML snippet ready to drop into a table cell.
      */
     public static function render_status(?string $status, ?string $errormsg): string {
         if ($status === null) {
@@ -342,6 +346,9 @@ class manage_table extends \table_sql {
      * Small "info" icon (Unicode ⓘ) whose HTML `title` attribute carries a
      * longer detail string. Used to collapse multi-line skip/error reasons
      * that would otherwise break the grid layout to multiple lines.
+     *
+     * @param string $detail Free-text detail surfaced on hover.
+     * @return string HTML span with the icon.
      */
     public static function info_icon(string $detail): string {
         return ' ' . html_writer::tag('span', 'ⓘ', [

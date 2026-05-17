@@ -82,6 +82,9 @@ class ipynb_extractor {
      * Thin wrapper around {@see extract_text()} that reads the file content.
      * The split lets the unit tests exercise the parsing/truncation logic
      * without needing to materialise a real stored_file fixture.
+     *
+     * @param \stored_file $file Submitted Jupyter notebook.
+     * @return string|null Extracted text, or null if the notebook could not be parsed.
      */
     public static function extract_file(\stored_file $file): ?string {
         $raw = $file->get_content();

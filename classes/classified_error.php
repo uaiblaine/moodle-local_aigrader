@@ -45,7 +45,7 @@ class classified_error {
      *
      * @param string $kind One of error_classifier::KIND_* constants.
      * @param string $raw Original raw error message.
-     * @param array<string,mixed> $params Extracted parameters.
+     * @param array $params Extracted parameters (string key => mixed value).
      */
     public function __construct(string $kind, string $raw, array $params) {
         $this->kind   = $kind;

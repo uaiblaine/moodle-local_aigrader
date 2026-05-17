@@ -31,7 +31,10 @@ namespace local_aigrader;
  */
 class output_parser {
     /**
-     * Parse.
+     * Parse the LLM's textual response into a structured parsed_proposal.
+     *
+     * @param string $raw Raw response body from the AI Subsystem provider.
+     * @return parsed_proposal Either success() with fields populated, or error() with a reason.
      */
     public static function parse(string $raw): parsed_proposal {
         if (trim($raw) === '') {
@@ -126,6 +129,9 @@ class output_parser {
 
     /**
      * Strip ```json fences if the LLM wrapped its output in markdown.
+     *
+     * @param string $text Possibly-fenced response body.
+     * @return string Text with leading/trailing fences removed (or unchanged if none).
      */
     private static function strip_code_fences(string $text): string {
         $text = trim($text);
@@ -139,6 +145,9 @@ class output_parser {
     /**
      * Find the first top-level JSON object in the text by balancing braces.
      * Tolerant of preamble/postamble that some LLMs add.
+     *
+     * @param string $text Body that may contain extraneous text around the JSON.
+     * @return string Substring from the first `{` to its matching `}`, or the original on no match.
      */
     private static function extract_json_object(string $text): string {
         $start = strpos($text, '{');

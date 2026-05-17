@@ -45,6 +45,10 @@ defined('MOODLE_INTERNAL') || die();
 final class bulk_dispatcher_test extends \basic_testcase {
     /**
      * Tiny helper: build the minimal row shape that classify() reads.
+     *
+     * @param string|null $status One of the local_aigrader_submission status values, or null.
+     * @param mixed $proposedgrade Optional AI-proposed grade.
+     * @return object Row stdClass with submissionid, ai_status, proposed_grade.
      */
     private function row(?string $status, $proposedgrade = null): object {
         return (object) [

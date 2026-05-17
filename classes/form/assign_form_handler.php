@@ -36,6 +36,9 @@ class assign_form_handler {
 
     /**
      * Add our fields to the mod_form. Called from local_aigrader_coursemodule_standard_elements().
+     *
+     * @param \moodleform_mod $formwrapper The mod_form being built (assign or otherwise).
+     * @param \MoodleQuickForm $mform Quickform reference to add elements to.
      */
     public static function add_elements($formwrapper, \MoodleQuickForm $mform): void {
         global $DB;
@@ -144,6 +147,10 @@ class assign_form_handler {
 
     /**
      * Validate the submitted form data.
+     *
+     * @param \moodleform_mod $formwrapper The mod_form being validated.
+     * @param array $data Submitted form data.
+     * @return array Map of field name => error message string.
      */
     public static function validate($formwrapper, array $data): array {
         $errors = [];
@@ -166,6 +173,10 @@ class assign_form_handler {
 
     /**
      * Persist the form data to local_aigrader_assign after the assignment is saved.
+     *
+     * @param \stdClass $moduleinfo Saved module info from mod_form (includes ->instance).
+     * @param \stdClass $course Course the module belongs to.
+     * @return \stdClass The same $moduleinfo (Moodle convention for post-actions callbacks).
      */
     public static function save($moduleinfo, $course) {
         global $DB, $USER;
@@ -219,6 +230,9 @@ class assign_form_handler {
 
     /**
      * Returns true if the form being built is the mod_assign edit form.
+     *
+     * @param \moodleform_mod $formwrapper The mod_form being introspected.
+     * @return bool True for mod_assign, false for everything else.
      */
     private static function is_assign_form($formwrapper): bool {
         $current = $formwrapper->get_current();

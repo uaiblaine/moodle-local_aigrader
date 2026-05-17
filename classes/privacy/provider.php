@@ -56,7 +56,10 @@ class provider implements
     // ---------------------------------------------------------------------.
 
     /**
-     * Get metadata.
+     * Declare each table this plugin writes to and which fields touch user data.
+     *
+     * @param collection $collection Metadata collection to add table declarations to.
+     * @return collection The collection with our three tables appended.
      */
     public static function get_metadata(collection $collection): collection {
 
@@ -132,7 +135,10 @@ class provider implements
     // ---------------------------------------------------------------------.
 
     /**
-     * Get contexts for userid.
+     * Find every context this plugin has stored data about the given user in.
+     *
+     * @param int $userid user.id of the data subject.
+     * @return contextlist Contexts (course-module level) the user appears in.
      */
     public static function get_contexts_for_userid(int $userid): contextlist {
         global $DB;
@@ -197,7 +203,9 @@ class provider implements
     }
 
     /**
-     * Get users in context.
+     * Populate the userlist with every user this plugin has data about in the given context.
+     *
+     * @param userlist $userlist Userlist scoped to a single context to populate.
      */
     public static function get_users_in_context(userlist $userlist): void {
         $context = $userlist->get_context();
@@ -254,7 +262,9 @@ class provider implements
     }
 
     /**
-     * Export user data.
+     * Export plugin data about the user, scoped to the contexts the user approved.
+     *
+     * @param approved_contextlist $contextlist Approved contexts for the data subject.
      */
     public static function export_user_data(approved_contextlist $contextlist): void {
         global $DB;
@@ -371,7 +381,9 @@ class provider implements
     // ---------------------------------------------------------------------.
 
     /**
-     * Delete data for all users in context.
+     * Wipe all plugin data for every user in the given module context.
+     *
+     * @param \context $context Module context (mod_assign instance).
      */
     public static function delete_data_for_all_users_in_context(\context $context): void {
         global $DB;
@@ -398,7 +410,9 @@ class provider implements
     }
 
     /**
-     * Delete data for user.
+     * Wipe plugin data for a single user across all approved contexts (GDPR Article 17).
+     *
+     * @param approved_contextlist $contextlist Contexts approved by the data subject.
      */
     public static function delete_data_for_user(approved_contextlist $contextlist): void {
         global $DB;
@@ -420,7 +434,9 @@ class provider implements
     }
 
     /**
-     * Delete data for users.
+     * Wipe plugin data for a list of users within a single approved context.
+     *
+     * @param approved_userlist $userlist Userlist approved by the admin.
      */
     public static function delete_data_for_users(approved_userlist $userlist): void {
         global $DB;
@@ -444,6 +460,9 @@ class provider implements
      * Apply the deletion policy for a single user within a single assignment.
      *   - As student: hard-delete log rows + submission row.
      *   - As teacher: anonymise (set the userid field to 0) in log/submission/config.
+     *
+     * @param int $assignid assign.id of the assignment to scope the deletion to.
+     * @param int $userid user.id of the data subject.
      */
     private static function erase_user_in_assignment(int $assignid, int $userid): void {
         global $DB;

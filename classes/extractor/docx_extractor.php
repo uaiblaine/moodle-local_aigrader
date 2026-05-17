@@ -64,6 +64,9 @@ class docx_extractor {
 
     /**
      * Convert WordprocessingML XML to plain text.
+     *
+     * @param string $xml Raw `word/document.xml` content from the docx zip.
+     * @return string|null Plain text, or null if nothing extractable.
      */
     private static function xml_to_text(string $xml): ?string {
         // Replace paragraph endings, line breaks and tabs with their text equivalents.
@@ -91,6 +94,9 @@ class docx_extractor {
 
     /**
      * Copy a stored_file to a temp path. Returns null on failure.
+     *
+     * @param \stored_file $file Source stored file (the submitted docx).
+     * @return string|null Temp filesystem path, or null on copy failure.
      */
     private static function copy_to_temp(\stored_file $file): ?string {
         try {
