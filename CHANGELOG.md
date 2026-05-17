@@ -5,6 +5,76 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.6-beta] — 2026-05-17
+
+### Changed
+
+- Bulk dropdown simplified to **two** actions instead of four. Pilot
+  feedback ("ahora es demasiado confuso") flagged that the v1.0.5
+  matrix (publish / grade / regrade / mark-manual) was noise without
+  added power — the teacher kept asking what was the difference between
+  grade and regrade, and mark-manual produced no visible effect.
+  Remaining actions:
+  - **Publicar nota propuesta tal cual** (destructive, confirmation
+    page)
+  - **Calificar con IA** (unified first-grade + re-grade)
+- Per-row button is now always labelled "Calificar con IA"
+  (previously "Calificar con IA" or "Recalificar con IA" depending on
+  current state). The dispatcher figures out the right semantics per
+  row internally.
+- `dispatcher::ACTION_GRADE_AI` eligibility expanded to accept any
+  state EXCEPT `pending_ai` (don't double-queue) and
+  `unsupported_format` (LLM can't recover from an unparseable file).
+  Re-grading a `published` row builds a fresh proposal but does NOT
+  touch the gradebook until the teacher publishes the new proposal.
+
+### Removed
+
+- `dispatcher::ACTION_REGRADE_AI` — merged into `ACTION_GRADE_AI`.
+- `dispatcher::ACTION_MARK_MANUAL` — single-row "Rechazar (calificar
+  manualmente)" button on review.php remains intact for individual
+  decisions; the bulk equivalent was dropped.
+- Related `bulk_action_*`, `bulk_warning_*`, `bulk_confirm_button_*`
+  and `bulk_skip_*` lang strings cleaned up.
+- `btn_regrade_with_ai` lang string (no longer used by the per-row
+  button).
+
+### Added
+
+- **Status counter + clickable filter chips** above the table:
+  `13 entregas · 10 con propuesta IA · 1 revisadas · 1 publicadas ·
+  1 con problemas · 0 sin calificar IA`. Each chip filters the table
+  to that bucket; clicking the active chip clears the filter.
+  Implemented via `?filter=<bucket>` URL param, persisted on reload.
+  Buckets are user-facing (not raw statuses): `problems` collapses
+  `error` + `unsupported_format`, `none` collapses NULL + `pending_ai`.
+- "Mostrar todas" link rendered when a filter is active.
+- Empty-state notification when no rows match the filter.
+
+### Tests
+
+- `tests/bulk_dispatcher_test.php` reduced from 27 → 19 tests:
+  - 12 cover the new (action × status) matrix for the 2 remaining
+    actions (vs the original 4 actions × 7 states).
+  - 1 new regression test (`test_removed_actions_are_classified_as_unknown`)
+    guards against silent acceptance of `regrade_ai` or `mark_manual` —
+    a stale browser tab or bookmarked URL submitting one of these
+    values must NOT silently take the grade_ai path.
+  - `test_action_list_is_minimal` pins the dropdown size to 2 actions
+    so any future addition is a deliberate test-change.
+
+### Notes
+
+- `PARAM_ALPHAEXT` (not `PARAM_ALPHA`) for the `?filter=` param: the
+  bucket keys contain underscores (e.g. `ai_proposed`) and
+  `PARAM_ALPHA` would silently strip them, making the filter look
+  broken to the teacher.
+- Explicit `text-white` on `.bg-primary` / `.bg-success` chips: some
+  Moodle themes (notably Moove) don't carry Bootstrap 5's default
+  rule that puts white text on dark badge backgrounds, which left the
+  count invisible. Spell it out so the chip stays readable
+  independent of theme.
+
 ## [v1.0.5-beta] — 2026-05-17
 
 ### Added

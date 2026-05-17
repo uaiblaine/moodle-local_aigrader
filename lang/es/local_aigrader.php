@@ -96,7 +96,6 @@ $string['th_grade']     = 'Nota propuesta';
 $string['th_action']    = 'Accion';
 
 $string['btn_grade_with_ai']   = 'Calificar con IA';
-$string['btn_regrade_with_ai'] = 'Recalificar con IA';
 $string['btn_pending']         = 'Procesando...';
 
 $string['status_none']        = 'Sin calificacion IA';
@@ -250,21 +249,15 @@ $string['bulk_select_row']          = 'Seleccionar entrega de {$a}';
 // Opciones del selector.
 $string['bulk_action_choose']          = '-- Elige una acción --';
 $string['bulk_action_approve_publish'] = 'Publicar nota propuesta tal cual';
-$string['bulk_action_grade_ai']        = 'Calificar con IA (sin propuesta previa)';
-$string['bulk_action_regrade_ai']      = 'Recalificar con IA (sobrescribe propuesta)';
-$string['bulk_action_mark_manual']     = 'Marcar para revisión manual';
+$string['bulk_action_grade_ai']        = 'Calificar con IA';
 
 // Advertencias mostradas en la pantalla de confirmación.
 $string['bulk_warning_approve_publish'] = 'Vas a publicar las notas propuestas por la IA tal cual, sin editar. Las notas se escribirán en el cuaderno de calificaciones y se notificará al alumnado en función de la configuración de la tarea. Esta acción no se puede deshacer en bloque.';
-$string['bulk_warning_grade_ai']        = 'Vas a lanzar la IA sobre las entregas seleccionadas que aún no tienen propuesta. Cada una consume tokens del proveedor configurado.';
-$string['bulk_warning_regrade_ai']      = 'Vas a volver a calificar con IA, sobrescribiendo las propuestas actuales. Las ediciones del profesor sobre las propuestas anteriores que no se hayan publicado se perderán.';
-$string['bulk_warning_mark_manual']     = 'Vas a marcar las entregas seleccionadas como revisadas manualmente. La propuesta de la IA se conserva pero se ignora; la nota tendrás que ponerla a mano desde Revisar.';
+$string['bulk_warning_grade_ai']        = 'Vas a lanzar la IA sobre las entregas seleccionadas. Si alguna ya tiene propuesta, se sobrescribirá con la nueva. Cada entrega consume tokens del proveedor configurado.';
 
 // Botones de confirmación.
 $string['bulk_confirm_button_approve_publish'] = 'Sí, publicar';
 $string['bulk_confirm_button_grade_ai']        = 'Sí, calificar';
-$string['bulk_confirm_button_regrade_ai']      = 'Sí, recalificar';
-$string['bulk_confirm_button_mark_manual']     = 'Sí, marcar como manual';
 
 // Pantalla de confirmación.
 $string['bulk_confirm_pagetitle']       = 'AI Grader Pro · Confirmar acción';
@@ -283,9 +276,22 @@ $string['bulk_done_errors']             = '{$a} con error';
 
 // Motivos por los que se salta una fila (mapeados a skip:<reason>).
 $string['bulk_skip_already_published'] = 'Ya publicadas';
-$string['bulk_skip_already_proposed']  = 'Ya tienen propuesta IA (usa Recalificar)';
 $string['bulk_skip_in_flight']         = 'Calificación en curso';
 $string['bulk_skip_unsupported']       = 'Formato no soportado (sube archivo válido primero)';
 $string['bulk_skip_no_proposal']       = 'Sin propuesta IA (usa Calificar con IA primero)';
-$string['bulk_skip_no_change']         = 'Sin estado IA (no hay nada que marcar)';
+$string['bulk_skip_unknown_state']     = 'Estado desconocido en la fila';
 $string['bulk_skip_unknown_action']    = 'Acción desconocida';
+
+// -----------------------------------------------------------------------.
+// Status counter + filter chips (manage page banner).
+// -----------------------------------------------------------------------.
+
+$string['count_total']             = '{$a} entregas';
+$string['count_ai_proposed']       = '{$a} con propuesta IA';
+$string['count_teacher_reviewed']  = '{$a} revisadas';
+$string['count_published']         = '{$a} publicadas';
+$string['count_problems']          = '{$a} con problemas';
+$string['count_none']              = '{$a} sin calificar IA';
+$string['count_filter_to']         = 'Filtrar: {$a}';
+$string['count_clear_filter']      = 'Mostrar todas';
+$string['count_no_rows_match_filter'] = 'No hay entregas en este estado. Quita el filtro para ver el resto.';

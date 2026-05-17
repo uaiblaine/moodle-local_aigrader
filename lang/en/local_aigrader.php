@@ -96,7 +96,6 @@ $string['th_grade']     = 'Proposed grade';
 $string['th_action']    = 'Action';
 
 $string['btn_grade_with_ai']   = 'Grade with AI';
-$string['btn_regrade_with_ai'] = 'Re-grade with AI';
 $string['btn_pending']         = 'Processing...';
 
 $string['status_none']        = 'No AI grading yet';
@@ -250,21 +249,15 @@ $string['bulk_select_row']          = 'Select submission by {$a}';
 // Dropdown options.
 $string['bulk_action_choose']          = '-- Choose an action --';
 $string['bulk_action_approve_publish'] = 'Publish proposed grade as-is';
-$string['bulk_action_grade_ai']        = 'Grade with AI (no existing proposal)';
-$string['bulk_action_regrade_ai']      = 'Re-grade with AI (overwrites proposal)';
-$string['bulk_action_mark_manual']     = 'Mark for manual review';
+$string['bulk_action_grade_ai']        = 'Grade with AI';
 
 // Confirmation warnings.
 $string['bulk_warning_approve_publish'] = 'You are about to publish the AI proposed grades as-is, without editing. Grades will be written to the gradebook and students will be notified according to the assignment settings. This action cannot be undone in bulk.';
-$string['bulk_warning_grade_ai']        = 'You are about to run the AI on selected submissions that do not yet have a proposal. Each one consumes tokens from the configured provider.';
-$string['bulk_warning_regrade_ai']      = 'You are about to re-grade with AI, overwriting current proposals. Any unpublished teacher edits on previous proposals will be lost.';
-$string['bulk_warning_mark_manual']     = 'You are about to mark selected submissions as manually reviewed. The AI proposal is kept but ignored; you will need to set the grade by hand from Review.';
+$string['bulk_warning_grade_ai']        = 'You are about to run the AI on the selected submissions. Any existing proposals will be overwritten. Each submission consumes tokens from the configured provider.';
 
 // Confirm buttons.
 $string['bulk_confirm_button_approve_publish'] = 'Yes, publish';
 $string['bulk_confirm_button_grade_ai']        = 'Yes, grade';
-$string['bulk_confirm_button_regrade_ai']      = 'Yes, re-grade';
-$string['bulk_confirm_button_mark_manual']     = 'Yes, mark manual';
 
 // Confirmation page.
 $string['bulk_confirm_pagetitle']       = 'AI Grader Pro · Confirm action';
@@ -283,9 +276,22 @@ $string['bulk_done_errors']             = '{$a} with errors';
 
 // Skip reasons mapped to skip:<reason>.
 $string['bulk_skip_already_published'] = 'Already published';
-$string['bulk_skip_already_proposed']  = 'Already have an AI proposal (use Re-grade)';
 $string['bulk_skip_in_flight']         = 'AI grading is in progress';
 $string['bulk_skip_unsupported']       = 'Unsupported file format (upload a valid file first)';
 $string['bulk_skip_no_proposal']       = 'No AI proposal (use Grade with AI first)';
-$string['bulk_skip_no_change']         = 'No AI status yet (nothing to mark)';
+$string['bulk_skip_unknown_state']     = 'Unknown row state';
 $string['bulk_skip_unknown_action']    = 'Unknown action';
+
+// -----------------------------------------------------------------------.
+// Status counter + filter chips (manage page banner).
+// -----------------------------------------------------------------------.
+
+$string['count_total']             = '{$a} submissions';
+$string['count_ai_proposed']       = '{$a} with AI proposal';
+$string['count_teacher_reviewed']  = '{$a} reviewed';
+$string['count_published']         = '{$a} published';
+$string['count_problems']          = '{$a} with problems';
+$string['count_none']              = '{$a} not yet graded';
+$string['count_filter_to']         = 'Filter: {$a}';
+$string['count_clear_filter']      = 'Show all';
+$string['count_no_rows_match_filter'] = 'No submissions in this state. Clear the filter to see the rest.';

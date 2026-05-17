@@ -49,21 +49,26 @@ class dispatcher {
     /** Approve the AI's proposal as-is and publish it to the gradebook. */
     public const ACTION_APPROVE_PUBLISH = 'approve_publish';
 
-    /** Request a fresh AI grading (only for rows that have never been graded yet). */
+    /**
+     * Ask the LLM to grade (or re-grade) the selected submissions.
+     *
+     * Single action that handles both the "this row has never been graded"
+     * and the "this row already has a proposal, do it again" cases. In v1.0.5
+     * these were two separate actions (grade_ai / regrade_ai) that confused
+     * the teacher when picking from the dropdown without giving any extra
+     * power; in v1.0.6 they were merged. The per-row button is always
+     * labelled "Calificar con IA" regardless of the current status.
+     *
+     * Skip rules:
+     *   - pending_ai          — already in flight, don't double-queue
+     *   - unsupported_format  — file is unprocessable, re-running won't help
+     */
     public const ACTION_GRADE_AI = 'grade_ai';
-
-    /** Re-run AI grading over rows that already have a proposal or errored out. */
-    public const ACTION_REGRADE_AI = 'regrade_ai';
-
-    /** Mark rows for manual grading by clearing the AI proposal status. */
-    public const ACTION_MARK_MANUAL = 'mark_manual';
 
     /** All recognized actions, in display order for the dropdown. */
     public const ALL_ACTIONS = [
         self::ACTION_APPROVE_PUBLISH,
         self::ACTION_GRADE_AI,
-        self::ACTION_REGRADE_AI,
-        self::ACTION_MARK_MANUAL,
     ];
 
     /** Actions that write to the gradebook and need a confirmation step. */
@@ -93,12 +98,11 @@ class dispatcher {
      * Returns either self::RESULT_OK or 'skip:<reason_key>'. Reason keys are
      * stable so the calling UI can map them to localized strings:
      *
-     *   - skip:no_proposal       — action needs a proposal but the row never ran
-     *   - skip:already_proposed  — action wants a fresh grading but a proposal exists
-     *   - skip:already_published — destructive action would re-publish what's already there
+     *   - skip:no_proposal       — approve_publish needs a proposal but the row has none
+     *   - skip:already_published — approve_publish on a row that's already in gradebook
      *   - skip:in_flight         — task is pending; don't touch
      *   - skip:unsupported       — file format prevents AI grading
-     *   - skip:no_change         — nothing to mark manual (status NULL)
+     *   - skip:unknown_state     — defensive catch-all for an unrecognised status
      *
      * @param string $action One of self::ALL_ACTIONS.
      * @param object $row A row from the manage.php SQL with at least:
@@ -129,21 +133,14 @@ class dispatcher {
                 return self::RESULT_SKIP_PREFIX . 'no_proposal'; // status null.
 
             case self::ACTION_GRADE_AI:
-                // Only run on rows that have never been graded successfully.
-                if ($status === null || $status === 'error') {
-                    return self::RESULT_OK;
-                }
-                if ($status === 'pending_ai') {
-                    return self::RESULT_SKIP_PREFIX . 'in_flight';
-                }
-                if ($status === 'unsupported_format') {
-                    return self::RESULT_SKIP_PREFIX . 'unsupported';
-                }
-                return self::RESULT_SKIP_PREFIX . 'already_proposed';
-
-            case self::ACTION_REGRADE_AI:
-                // Anything that has run before (succeeded or failed) is eligible.
-                if (in_array($status, ['ai_proposed', 'teacher_reviewed', 'published', 'error'], true)) {
+                // Unified "Calificar con IA": covers both the never-graded
+                // case (status NULL) and the re-grade case (any prior state
+                // with a proposal or a failed attempt). Re-grading a
+                // published row re-runs the LLM but does NOT touch the
+                // gradebook — the new proposal sits in ai_proposed waiting
+                // for the teacher to publish (or re-publish) it.
+                if ($status === null
+                    || in_array($status, ['ai_proposed', 'teacher_reviewed', 'published', 'error'], true)) {
                     return self::RESULT_OK;
                 }
                 if ($status === 'pending_ai') {
@@ -154,21 +151,7 @@ class dispatcher {
                     // teacher needs to upload a parseable version first.
                     return self::RESULT_SKIP_PREFIX . 'unsupported';
                 }
-                return self::RESULT_SKIP_PREFIX . 'no_proposal'; // status null.
-
-            case self::ACTION_MARK_MANUAL:
-                // Useful for any row where AI has touched the workflow.
-                if (in_array($status, ['ai_proposed', 'teacher_reviewed', 'error', 'unsupported_format'], true)) {
-                    return self::RESULT_OK;
-                }
-                if ($status === 'pending_ai') {
-                    return self::RESULT_SKIP_PREFIX . 'in_flight';
-                }
-                if ($status === 'published') {
-                    // Already in the gradebook; unpublishing is a separate action.
-                    return self::RESULT_SKIP_PREFIX . 'already_published';
-                }
-                return self::RESULT_SKIP_PREFIX . 'no_change'; // status null.
+                return self::RESULT_SKIP_PREFIX . 'unknown_state';
 
             default:
                 return self::RESULT_SKIP_PREFIX . 'unknown_action';
@@ -235,7 +218,6 @@ class dispatcher {
                 return $result;
 
             case self::ACTION_GRADE_AI:
-            case self::ACTION_REGRADE_AI:
                 // Below threshold: run inline (best UX for small cohorts).
                 // Above threshold: enqueue tasks (avoid 60s+ request hangs).
                 if (count($eligible) <= $synclimit) {
@@ -261,23 +243,6 @@ class dispatcher {
                         $task->set_userid((int) $USER->id);
                         \core\task\manager::queue_adhoc_task($task);
                         $result['queued']++;
-                    }
-                }
-                return $result;
-
-            case self::ACTION_MARK_MANUAL:
-                global $DB;
-                foreach ($eligible as $sid => $row) {
-                    try {
-                        $DB->update_record('local_aigrader_submission', (object) [
-                            'id'           => (int) $row->aigrader_id,
-                            'status'       => 'teacher_reviewed',
-                            'final_grader' => (int) $USER->id,
-                            'timemodified' => time(),
-                        ]);
-                        $result['ok']++;
-                    } catch (\Throwable $e) {
-                        $result['errors'][(int) $sid] = $e->getMessage();
                     }
                 }
                 return $result;

@@ -19,11 +19,14 @@
  *
  *   action × current AI-grader status → eligible or skipped(reason).
  *
- * These tests focus on classify() only; execute() is a side-effecting
- * orchestrator (calls manager::grade_submission, writes DB, enqueues tasks)
- * which is best tested via higher-level behat scenarios against a real
- * fixture course. The eligibility matrix is the actual business logic — and
- * the part that is easy to get subtly wrong without a regression test.
+ * v1.0.6 simplified the action set: regrade_ai was merged into grade_ai
+ * (the dispatcher figures out per row whether it's a first grade or a
+ * re-grade) and mark_manual was removed entirely (its bulk semantics
+ * were unclear; the single-row "Rechazar" button on review.php remains
+ * for that decision). These tests reflect the reduced matrix.
+ *
+ * classify() is pure; execute() is a side-effecting orchestrator best
+ * tested via higher-level Behat scenarios against a real fixture course.
  *
  * @package    local_aigrader
  * @copyright  2026 Hernán Díaz
@@ -108,7 +111,15 @@ class bulk_dispatcher_test extends \basic_testcase {
     }
 
     // ===================================================================.
-    // ACTION_GRADE_AI — only runs on rows that haven't been graded yet.
+    // ACTION_GRADE_AI — unified first-grade + re-grade in one action.
+    //
+    // The dispatcher accepts any state EXCEPT pending_ai (don't double-
+    // queue a task that's still running) and unsupported_format (re-running
+    // the LLM cannot recover from a file we couldn't parse — the teacher
+    // has to upload a parseable version first). Everything else, including
+    // published, is eligible: re-grading a published row produces a new
+    // proposal sitting in ai_proposed; the gradebook value stays put until
+    // the teacher explicitly publishes the new proposal.
     // ===================================================================.
 
     public function test_grade_ai_runs_on_null_status(): void {
@@ -126,10 +137,29 @@ class bulk_dispatcher_test extends \basic_testcase {
         );
     }
 
-    public function test_grade_ai_skips_when_proposal_exists(): void {
+    public function test_grade_ai_runs_on_ai_proposed(): void {
+        // v1.0.6 — previously skipped as 'already_proposed' (with
+        // regrade_ai being the separate action). Now eligible.
         $this->assertSame(
-            'skip:already_proposed',
+            dispatcher::RESULT_OK,
             dispatcher::classify(dispatcher::ACTION_GRADE_AI, $this->row('ai_proposed', 7.0))
+        );
+    }
+
+    public function test_grade_ai_runs_on_teacher_reviewed(): void {
+        $this->assertSame(
+            dispatcher::RESULT_OK,
+            dispatcher::classify(dispatcher::ACTION_GRADE_AI, $this->row('teacher_reviewed', 7.0))
+        );
+    }
+
+    public function test_grade_ai_runs_on_published(): void {
+        // Re-grading a published row builds a fresh proposal but DOES NOT
+        // touch the gradebook. The teacher has to explicitly publish the
+        // new proposal to overwrite the live grade.
+        $this->assertSame(
+            dispatcher::RESULT_OK,
+            dispatcher::classify(dispatcher::ACTION_GRADE_AI, $this->row('published', 8.0))
         );
     }
 
@@ -148,93 +178,6 @@ class bulk_dispatcher_test extends \basic_testcase {
     }
 
     // ===================================================================.
-    // ACTION_REGRADE_AI — runs on anything that ran before.
-    // ===================================================================.
-
-    public function test_regrade_ai_runs_on_ai_proposed(): void {
-        $this->assertSame(
-            dispatcher::RESULT_OK,
-            dispatcher::classify(dispatcher::ACTION_REGRADE_AI, $this->row('ai_proposed', 7.0))
-        );
-    }
-
-    public function test_regrade_ai_runs_on_published(): void {
-        // Published rows can be re-graded too; the gradebook value stays
-        // until the teacher publishes the new proposal explicitly.
-        $this->assertSame(
-            dispatcher::RESULT_OK,
-            dispatcher::classify(dispatcher::ACTION_REGRADE_AI, $this->row('published', 8.0))
-        );
-    }
-
-    public function test_regrade_ai_runs_on_error(): void {
-        $this->assertSame(
-            dispatcher::RESULT_OK,
-            dispatcher::classify(dispatcher::ACTION_REGRADE_AI, $this->row('error'))
-        );
-    }
-
-    public function test_regrade_ai_skips_unsupported(): void {
-        // Re-running can't fix a too-big PDF — the teacher needs to upload
-        // a parseable version first. Surface the skip reason explicitly.
-        $this->assertSame(
-            'skip:unsupported',
-            dispatcher::classify(dispatcher::ACTION_REGRADE_AI, $this->row('unsupported_format'))
-        );
-    }
-
-    public function test_regrade_ai_skips_null_status(): void {
-        // Re-grade implies "grade again"; if there is no first grade, fall
-        // back to ACTION_GRADE_AI. We do not silently elevate.
-        $this->assertSame(
-            'skip:no_proposal',
-            dispatcher::classify(dispatcher::ACTION_REGRADE_AI, $this->row(null))
-        );
-    }
-
-    // ===================================================================.
-    // ACTION_MARK_MANUAL — clears the AI proposal status.
-    // ===================================================================.
-
-    public function test_mark_manual_runs_on_ai_proposed(): void {
-        $this->assertSame(
-            dispatcher::RESULT_OK,
-            dispatcher::classify(dispatcher::ACTION_MARK_MANUAL, $this->row('ai_proposed', 7.0))
-        );
-    }
-
-    public function test_mark_manual_runs_on_unsupported(): void {
-        // Useful when the format issue is unfixable and the teacher wants
-        // to grade by hand without bumping the row to a published state.
-        $this->assertSame(
-            dispatcher::RESULT_OK,
-            dispatcher::classify(dispatcher::ACTION_MARK_MANUAL, $this->row('unsupported_format'))
-        );
-    }
-
-    public function test_mark_manual_runs_on_error(): void {
-        $this->assertSame(
-            dispatcher::RESULT_OK,
-            dispatcher::classify(dispatcher::ACTION_MARK_MANUAL, $this->row('error'))
-        );
-    }
-
-    public function test_mark_manual_skips_already_published(): void {
-        // Unpublishing is a separate action (not implemented yet).
-        $this->assertSame(
-            'skip:already_published',
-            dispatcher::classify(dispatcher::ACTION_MARK_MANUAL, $this->row('published', 8.0))
-        );
-    }
-
-    public function test_mark_manual_skips_null_status(): void {
-        $this->assertSame(
-            'skip:no_change',
-            dispatcher::classify(dispatcher::ACTION_MARK_MANUAL, $this->row(null))
-        );
-    }
-
-    // ===================================================================.
     // Bad inputs.
     // ===================================================================.
 
@@ -245,9 +188,31 @@ class bulk_dispatcher_test extends \basic_testcase {
         );
     }
 
+    public function test_removed_actions_are_classified_as_unknown(): void {
+        // v1.0.5 actions that were dropped in v1.0.6 should now be rejected
+        // by classify() (and by the bulk.php validation layer, which is the
+        // first line of defense). This is the regression test for that
+        // removal — a stale browser tab or bookmarked URL submitting one of
+        // these values must not silently take the grade_ai path.
+        foreach (['regrade_ai', 'mark_manual'] as $removed) {
+            $this->assertSame(
+                'skip:unknown_action',
+                dispatcher::classify($removed, $this->row('ai_proposed', 7.0)),
+                "Removed action '$removed' must not be silently accepted."
+            );
+        }
+    }
+
     // ===================================================================.
-    // Destructive actions list contract — UI relies on this membership.
+    // Action list / destructiveness contract — UI relies on this.
     // ===================================================================.
+
+    public function test_action_list_is_minimal(): void {
+        // Two actions in v1.0.6: publish + grade. Adding more here is a
+        // deliberate UX decision; if a future change wants a third action,
+        // it should pair with a test addition.
+        $this->assertSame(['approve_publish', 'grade_ai'], dispatcher::ALL_ACTIONS);
+    }
 
     public function test_approve_publish_is_destructive(): void {
         $this->assertContains(
@@ -258,24 +223,13 @@ class bulk_dispatcher_test extends \basic_testcase {
     }
 
     public function test_grade_ai_is_not_destructive(): void {
+        // grade_ai never writes to the gradebook; it only proposes a value
+        // in local_aigrader_submission. The confirmation step is reserved
+        // for actions that change the live student grade.
         $this->assertNotContains(
             dispatcher::ACTION_GRADE_AI,
             dispatcher::DESTRUCTIVE_ACTIONS,
             'grade_ai does not write final grades to the gradebook (only proposes).'
         );
-    }
-
-    public function test_mark_manual_is_not_destructive(): void {
-        $this->assertNotContains(
-            dispatcher::ACTION_MARK_MANUAL,
-            dispatcher::DESTRUCTIVE_ACTIONS,
-            'mark_manual only flips a status flag; nothing reaches the gradebook.'
-        );
-    }
-
-    public function test_all_actions_are_known_strings(): void {
-        // Guards against typos that would silently break the UI's i18n.
-        $expected = ['approve_publish', 'grade_ai', 'regrade_ai', 'mark_manual'];
-        $this->assertSame($expected, dispatcher::ALL_ACTIONS);
     }
 }

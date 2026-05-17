@@ -216,18 +216,144 @@ if ($haspending) {
 echo \local_aigrader\output\error_banner::render($rows, $cmid);
 
 // -------------------------------------------------------------------.
+// Status counters + clickable filter chips.
+//
+// We bucket each row into one of five user-facing buckets that map onto
+// the badge colours in the table:
+//   - 'ai_proposed'      green   "Propuesta IA" (the teacher's queue)
+//   - 'teacher_reviewed' blue    "Revisada por profesor"
+//   - 'published'        green   "Publicada"
+//   - 'problems'         yellow  "Formato no soportado" + "Error"
+//   - 'none'             gray    Submission with no AI status yet (status = NULL)
+//
+// 'pending_ai' is treated as 'none' for filtering purposes — the polling
+// banner above is the right place to surface in-flight work, not a sticky
+// filter on a transient state.
+//
+// Click on a chip filters the table to that bucket (?filter=...). Click
+// again on the same chip — or on the "Todas" chip — clears the filter.
+// We never hide a row from the bulk action form: the row checkboxes that
+// are filtered out simply don't render, so the teacher can only act on
+// what they can see. That's an intentional safety property.
+// -------------------------------------------------------------------.
+// PARAM_ALPHAEXT (not PARAM_ALPHA) — the bucket keys contain underscores
+// (e.g. 'ai_proposed') and PARAM_ALPHA would silently strip them, making
+// the filter look broken to the teacher.
+$filter = optional_param('filter', '', PARAM_ALPHAEXT);
+$validfilters = ['ai_proposed', 'teacher_reviewed', 'published', 'problems', 'none'];
+if ($filter !== '' && !in_array($filter, $validfilters, true)) {
+    $filter = '';
+}
+
+$bucketof = function ($status) {
+    if ($status === null || $status === 'pending_ai') {
+        return 'none';
+    }
+    if ($status === 'error' || $status === 'unsupported_format') {
+        return 'problems';
+    }
+    return $status; // ai_proposed | teacher_reviewed | published.
+};
+
+$counts = ['ai_proposed' => 0, 'teacher_reviewed' => 0, 'published' => 0,
+    'problems' => 0, 'none' => 0];
+foreach ($rows as $r) {
+    $counts[$bucketof($r->ai_status ?? null)]++;
+}
+
+// Build the chip row. Chips render even when count is 0 so the layout
+// is stable across reloads; the inactive ones get a muted style.
+// Force text-white on dark-background chips. Some Moodle themes
+// (notably Moove) don't carry Bootstrap 5's "white text on .badge with
+// .bg-primary/.bg-success" rule, leaving the count invisible. Spell it
+// out so the chip stays readable independent of theme.
+$chipdefs = [
+    'ai_proposed'      => ['label' => 'count_ai_proposed',      'class' => 'bg-success text-white'],
+    'teacher_reviewed' => ['label' => 'count_teacher_reviewed', 'class' => 'bg-primary text-white'],
+    'published'        => ['label' => 'count_published',        'class' => 'bg-success text-white'],
+    'problems'         => ['label' => 'count_problems',         'class' => 'bg-warning text-dark'],
+    'none'             => ['label' => 'count_none',             'class' => 'bg-secondary text-white'],
+];
+
+echo html_writer::start_div('aigrader-counter mb-3 d-flex flex-wrap align-items-center gap-2');
+echo html_writer::tag('strong',
+    get_string('count_total', 'local_aigrader', count($rows)),
+    ['class' => 'me-2']
+);
+
+foreach ($chipdefs as $key => $def) {
+    $count = $counts[$key];
+    $isactive = ($filter === $key);
+    $ismuted = ($count === 0 && !$isactive);
+
+    // Toggle behavior: clicking the active chip clears the filter.
+    $targeturl = new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]);
+    if (!$isactive) {
+        $targeturl->param('filter', $key);
+    }
+
+    $chipclass = 'badge ' . $def['class'];
+    if ($isactive) {
+        $chipclass .= ' border border-dark';
+    }
+    if ($ismuted) {
+        $chipclass .= ' opacity-50';
+    }
+    $chipclass .= ' text-decoration-none';
+
+    echo html_writer::link(
+        $targeturl,
+        s(get_string($def['label'], 'local_aigrader', $count)),
+        [
+            'class'      => $chipclass,
+            'style'      => 'cursor: pointer;',
+            'aria-label' => $isactive
+                ? get_string('count_clear_filter', 'local_aigrader')
+                : get_string('count_filter_to', 'local_aigrader', get_string($def['label'], 'local_aigrader', $count)),
+        ]
+    );
+}
+
+if ($filter !== '') {
+    echo html_writer::link(
+        new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]),
+        get_string('count_clear_filter', 'local_aigrader'),
+        ['class' => 'ms-2 small']
+    );
+}
+echo html_writer::end_div();
+
+// Apply the filter. We keep the unfiltered $rows reference around so the
+// counter math above stays honest; the table renders only $visiblerows.
+$visiblerows = $rows;
+if ($filter !== '') {
+    $visiblerows = array_filter($rows, fn($r) => $bucketof($r->ai_status ?? null) === $filter);
+}
+
+if (empty($visiblerows)) {
+    echo $OUTPUT->notification(
+        get_string('count_no_rows_match_filter', 'local_aigrader'),
+        \core\output\notification::NOTIFY_INFO
+    );
+}
+
+// -------------------------------------------------------------------.
 // Bulk actions form. Wraps the table so the teacher can apply one
 // action ("Publicar tal cual", "Calificar con IA", …) to many rows in
 // one click. POSTs to bulk.php which classifies, optionally shows a
 // confirmation page for destructive actions, and dispatches to the
 // bulk dispatcher.
 // -------------------------------------------------------------------.
+// Bulk dropdown is intentionally small: just one destructive action
+// (publish) and one work action (grade with AI). v1.0.5 had four actions;
+// the pilot feedback was that the matrix was too noisy and that "Recalificar"
+// vs "Calificar con IA" was a distinction without difference for the
+// teacher — they pick "Calificar con IA" and the dispatcher figures out
+// whether each row is a first grade or a re-grade.
 $bulkactions = [
     ''                                                       => get_string('bulk_action_choose', 'local_aigrader'),
     \local_aigrader\bulk\dispatcher::ACTION_APPROVE_PUBLISH => get_string('bulk_action_approve_publish', 'local_aigrader'),
     \local_aigrader\bulk\dispatcher::ACTION_GRADE_AI       => get_string('bulk_action_grade_ai', 'local_aigrader'),
-    \local_aigrader\bulk\dispatcher::ACTION_REGRADE_AI     => get_string('bulk_action_regrade_ai', 'local_aigrader'),
-    \local_aigrader\bulk\dispatcher::ACTION_MARK_MANUAL    => get_string('bulk_action_mark_manual', 'local_aigrader'),
 ];
 
 // Render the bulk form OUTSIDE the table (not wrapping it) so the per-row
@@ -283,7 +409,7 @@ $table->head = [
 $table->attributes['class'] = 'generaltable';
 $table->data = [];
 
-foreach ($rows as $r) {
+foreach ($visiblerows as $r) {
     $student   = fullname($r);
     $submitted = $r->submitted_at ? userdate($r->submitted_at, get_string('strftimedatetimeshort')) : '-';
     $status    = local_aigrader_render_status($r->ai_status, $r->error_message);
@@ -302,10 +428,11 @@ foreach ($rows as $r) {
         'aria-label' => get_string('bulk_select_row', 'local_aigrader', $student),
     ]);
 
-    // Build action: trigger or re-trigger button.
-    $btnlabel = ($r->ai_status === null)
-        ? get_string('btn_grade_with_ai', 'local_aigrader')
-        : get_string('btn_regrade_with_ai', 'local_aigrader');
+    // Per-row button label is always "Calificar con IA" — see v1.0.6 UX
+    // simplification: distinguishing "first grade" from "re-grade" gave
+    // the teacher no actionable information (both call the same code
+    // path) and made the dropdown / button text unnecessarily wordy.
+    $btnlabel = get_string('btn_grade_with_ai', 'local_aigrader');
 
     $disabled = ($r->ai_status === 'pending_ai');
 
@@ -341,10 +468,15 @@ foreach ($rows as $r) {
         $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
         $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'enqueue']);
         $action .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'submissionid', 'value' => $r->submissionid]);
+        // Button style: primary when "Calificar con IA" is the most
+        // useful next action (no proposal yet), outline-secondary as the
+        // soft "re-grade" option whenever a Revisar button is already the
+        // primary CTA for the row.
+        $isprimaryforrow = ($r->ai_status === null || $r->ai_status === 'pending_ai');
         $action .= html_writer::empty_tag('input', [
-            'type' => 'submit',
+            'type'  => 'submit',
             'value' => $btnlabel,
-            'class' => ($r->ai_status === null) ? 'btn btn-primary btn-sm' : 'btn btn-outline-secondary btn-sm',
+            'class' => $isprimaryforrow ? 'btn btn-primary btn-sm' : 'btn btn-outline-secondary btn-sm',
         ]);
         $action .= html_writer::end_tag('form');
     } else {
