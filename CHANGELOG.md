@@ -5,6 +5,58 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.26-beta] — 2026-05-17
+
+### Fixed
+
+- **Backup/Restore API support** — the plugin now hooks into
+  `mod_assign`'s backup pipeline so the per-assignment configuration
+  (`local_aigrader_assign` row: criteria text, model override,
+  language override, source, enabled flag) is included in course
+  backups and re-created on restore. Without this fix, a teacher
+  duplicating a course or restoring it on another site would lose
+  their AI Grader Pro evaluation criteria for every assignment —
+  flagged as **HIGH severity** by the Moodle Plugin Directory peer
+  reviewer ([@volodymyrdovhan](https://github.com/HernanDiaz/moodle-local_aigrader/issues)).
+
+  Implementation:
+  - **`backup/moodle2/backup_local_aigrader_plugin.class.php`** —
+    extends `backup_local_plugin`, hooks into the assign module
+    backup task via `define_module_plugin_structure()`. Short-
+    circuits for any non-assign module. Annotates the
+    `usermodified` column as a user id so cross-site restores
+    re-map it.
+  - **`backup/moodle2/restore_local_aigrader_plugin.class.php`** —
+    extends `restore_local_plugin`. Implements
+    `process_aigrader_config($data)` to re-create the config row
+    bound to the new `assignid` the restore task created.
+    Re-maps `usermodified` via the user id table (falls back to
+    the user performing the restore when the original isn't on
+    the destination site). Applies date offsets to
+    `timecreated` / `timemodified`. Defensively updates in place
+    instead of inserting if a config already exists on the
+    target.
+
+### Scope note
+
+- Only the **per-assignment configuration** is backed up in this
+  release. The student-data tables — `local_aigrader_submission`
+  (proposals + final grades) and `local_aigrader_log` (AI Act
+  audit trail) — are intentionally NOT included in v1.0.26 because
+  they need the `assign_submission` id-mapping plumbing in place
+  to restore correctly. A follow-up in v1.0.27 will add those
+  with the user-data backup flag respected. For now, restoring a
+  course re-creates the AI Grader Pro setup but does not carry
+  prior grading history; that's recoverable by re-running the AI
+  on the restored submissions.
+
+### Test plan
+
+- `TESTPLAN.md` scenario 19 added: backup-and-restore round trip
+  with AI Grader Pro enabled on an assignment. Verifies the
+  configuration survives both course-duplication and cross-site
+  restore.
+
 ## [v1.0.25-beta] — 2026-05-17
 
 ### Fixed

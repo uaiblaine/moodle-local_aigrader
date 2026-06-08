@@ -363,6 +363,77 @@ to temporarily revoke the LLM API key.
 
 ---
 
+## Scenario 19: Course backup and restore preserve AI Grader Pro config
+
+Verifies that the Backup/Restore API hooks (added in v1.0.26) keep
+the per-assignment evaluation criteria intact when a course is
+duplicated, restored on the same site, or imported on another site.
+
+### Same-site backup → restore
+
+1. Open a course with at least one assignment that has AI Grader
+   Pro **enabled** and a non-trivial **Evaluation criteria** value
+   (write something distinctive: "TEST-MARKER-2026 — evaluate
+   thesis clarity"), plus an optional **Model override**
+   (e.g. `gpt-4o-mini`) and **Feedback language** (`es`).
+2. *Course administration → Course reuse → Backup*. Tick
+   "Include user data" if you want to test the full path; untick
+   it for the minimal config-only path.
+3. Complete the backup wizard. Download the resulting `.mbz`.
+4. *Course administration → Course reuse → Restore*. Upload the
+   `.mbz`. Restore as a **new course** in the same site.
+5. **Expected**: the new course has the assignment, and editing it
+   shows:
+   - AI Grader Pro fieldset is **enabled**.
+   - Evaluation criteria contains `TEST-MARKER-2026 — evaluate
+     thesis clarity`.
+   - Model override and Feedback language carry the original
+     values.
+6. Open the new course's AI Grader Pro manage page. **Expected**:
+   loads without "AI Grader Pro is not enabled on this
+   assignment" error.
+
+### Course duplication (Course reuse → Import)
+
+7. From a different course, *Course administration → Course reuse
+   → Import* → pick the source course. Run the import.
+8. **Expected**: same outcome as steps 5-6 — the assignment in the
+   destination course inherits AI Grader Pro config from the
+   source.
+
+### Cross-site restore (different Moodle install)
+
+9. Take the `.mbz` from step 3 to a separate Moodle 4.5+ instance
+   that ALSO has `local_aigrader` installed.
+10. *Site administration → Courses → Restore course*. Upload the
+    file, restore as a new course.
+11. **Expected**: the configuration row is re-created. If the
+    `usermodified` user does not exist on the destination,
+    `local_aigrader_assign.usermodified` falls back to the
+    restoring admin's user id (the row is still queryable, no
+    foreign-key violation).
+
+### Cross-site restore (plugin NOT installed on destination)
+
+12. Take the `.mbz` to a Moodle 4.5+ instance WITHOUT
+    `local_aigrader` installed.
+13. Restore the course.
+14. **Expected**: restore completes successfully. The plugin's
+    XML data inside the `.mbz` is silently ignored (Moodle's
+    restore engine handles missing plugin classes gracefully).
+    The assignment is restored without the AI Grader Pro fields,
+    as expected.
+
+### Out of scope for v1.0.26
+
+- The student-data tables (`local_aigrader_submission` and
+  `local_aigrader_log`) are NOT backed up in this revision. After
+  restoring, prior grading history is absent — re-running "Grade
+  with AI" on the restored submissions re-creates it. Backup of
+  these tables is planned for v1.0.27.
+
+---
+
 ## What is intentionally **not** in this plan
 
 - **Behat coverage**: the plugin ships with PHPUnit tests
