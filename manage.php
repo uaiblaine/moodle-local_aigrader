@@ -38,6 +38,7 @@
 require(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
+use local_aigrader\local\group_helper;
 use local_aigrader\output\manage_table;
 
 $cmid = required_param('cmid', PARAM_INT);
@@ -74,6 +75,20 @@ if ($action === 'enqueue' && data_submitted()) {
         '*',
         MUST_EXIST
     );
+
+    // Group boundary guard. A teacher confined to separate groups must not be
+    // able to grade a student outside their active group even via a tampered
+    // or stale POST. resolve() with update=false reads the already-active
+    // group (set on the GET page load) without letting the POST change it.
+    $groupstate = group_helper::resolve($cm, $course, $context, false);
+    if (!group_helper::can_access_user($groupstate, (int) $submission->userid)) {
+        redirect(
+            new moodle_url('/local/aigrader/manage.php', ['cmid' => $cmid]),
+            get_string('manage_group_denied', 'local_aigrader'),
+            null,
+            \core\output\notification::NOTIFY_ERROR
+        );
+    }
 
     // Pre-insert pending row for immediate UI feedback.
     $existing = $DB->get_record('local_aigrader_submission', ['submissionid' => $submissionid]);
@@ -186,6 +201,33 @@ if (!$config || empty($config->enabled)) {
 }
 
 // -------------------------------------------------------------------.
+// Group mode. Resolve the active group (honouring ?group=) and, when the
+// activity uses groups, render the standard group selector so the teacher
+// can switch. A separate-groups teacher only ever sees their own groups in
+// that menu; one who belongs to no group is locked out entirely (rather
+// than silently shown the whole cohort) — see group_helper::resolve().
+// -------------------------------------------------------------------.
+$groupstate = group_helper::resolve($cm, $course, $context, true);
+if ($groupstate->uses_groups()) {
+    echo groups_print_activity_menu($cm, $pageurl, true);
+}
+if ($groupstate->lockedout) {
+    echo $OUTPUT->notification(
+        get_string('manage_group_locked', 'local_aigrader'),
+        \core\output\notification::NOTIFY_WARNING
+    );
+    echo $OUTPUT->footer();
+    exit;
+}
+
+// Build the group members-join once and reuse it across every listing query
+// below (counter, error banner, table). All three alias assign_submission as
+// `s`, so the same `s.userid` join and where fragment splice into each. When
+// no group filter applies the fragments are empty and the queries are unchanged.
+$groupjoin  = group_helper::members_join($groupstate, 's.userid', $context);
+$groupwhere = $groupjoin->wheres !== '' ? " AND ({$groupjoin->wheres})" : '';
+
+// -------------------------------------------------------------------.
 // Status counter (separate query, no pagination/filter applied).
 //
 // This is the source of truth for the chip totals and for the auto-refresh
@@ -197,14 +239,16 @@ $rawcounts = $DB->get_records_sql(
             COUNT(*) AS n
        FROM {assign_submission} s
        LEFT JOIN {local_aigrader_submission} ag ON ag.submissionid = s.id
+            {$groupjoin->joins}
       WHERE s.assignment = :assignid
         AND s.latest = 1
         AND s.status  = :submitted
+            {$groupwhere}
    GROUP BY ag.status",
-    [
+    array_merge([
         'assignid'  => $assign->id,
         'submitted' => ASSIGN_SUBMISSION_STATUS_SUBMITTED,
-    ]
+    ], $groupjoin->params)
 );
 
 $totalrows = 0;
@@ -228,8 +272,11 @@ foreach ($rawcounts as $rc) {
 }
 
 if ($totalrows === 0) {
+    // When a specific group is active, say so — otherwise the teacher cannot
+    // tell "nobody has submitted" apart from "nobody in this group has".
+    $emptykey = $groupstate->is_restricted() ? 'manage_no_submissions_group' : 'manage_no_submissions';
     echo $OUTPUT->notification(
-        get_string('manage_no_submissions', 'local_aigrader'),
+        get_string($emptykey, 'local_aigrader'),
         \core\output\notification::NOTIFY_INFO
     );
     echo $OUTPUT->footer();
@@ -262,14 +309,16 @@ if ($counts['problems'] > 0) {
            FROM {assign_submission} s
            JOIN {user} u ON u.id = s.userid
            JOIN {local_aigrader_submission} ag ON ag.submissionid = s.id
+                {$groupjoin->joins}
           WHERE s.assignment = :assignid AND s.latest = 1
             AND s.status = :submitted
-            AND ag.status = :errstatus",
+            AND ag.status = :errstatus
+                {$groupwhere}",
         array_merge([
             'assignid'  => $assign->id,
             'submitted' => ASSIGN_SUBMISSION_STATUS_SUBMITTED,
             'errstatus' => 'error',
-        ], $namefields->params)
+        ], $namefields->params, $groupjoin->params)
     );
     echo \local_aigrader\output\error_banner::render($errorrows, $cmid);
 }
@@ -453,12 +502,13 @@ $fields = "s.id            AS submissionid,
            ag.error_message";
 $from = "{assign_submission} s
          JOIN {user} u ON u.id = s.userid
-         LEFT JOIN {local_aigrader_submission} ag ON ag.submissionid = s.id";
-$where = 's.assignment = :assignid AND s.latest = 1 AND s.status = :submitted';
+         LEFT JOIN {local_aigrader_submission} ag ON ag.submissionid = s.id
+         {$groupjoin->joins}";
+$where = 's.assignment = :assignid AND s.latest = 1 AND s.status = :submitted' . $groupwhere;
 $params = array_merge([
     'assignid'  => $assign->id,
     'submitted' => ASSIGN_SUBMISSION_STATUS_SUBMITTED,
-], $namefields->params);
+], $namefields->params, $groupjoin->params);
 
 // Apply filter at the SQL level — far cheaper than fetching everything
 // and filtering in PHP, and works correctly with pagination.

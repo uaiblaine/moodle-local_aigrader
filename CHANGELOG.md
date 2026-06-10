@@ -5,6 +5,33 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.27-beta] — 2026-06-10
+
+### Added
+
+- **Separate / visible groups support on the manage screen** — the
+  submissions list now honours the assignment's group mode, matching
+  `mod_assign`'s own grading view. A teacher in separate-groups mode
+  without `moodle/site:accessallgroups` only sees — and can only grade —
+  students who share one of their groups; a standard group selector lets
+  them switch between their groups (or filter, under visible groups).
+
+  Implementation:
+  - **`classes/local/group_helper.php`** + **`classes/local/group_state.php`**
+    — a stateless helper that resolves the active group via
+    `groups_get_activity_group()` and produces a `\core\dml\sql_join`
+    members-filter for the listing queries plus a `can_access_user()`
+    guard for the write paths. Critically, it closes the core edge where a
+    separate-groups teacher with no group membership resolves to group 0
+    ("all groups"): that user is flagged `lockedout` and shown nobody.
+  - **`manage.php`** — renders the group selector, applies the members-join
+    to the status counter, the error banner and the main table, guards the
+    per-row "Grade with AI" action, and hard-stops a locked-out teacher.
+  - **`bulk.php`** — applies the same members-join to the bulk row loader so
+    a tampered POST cannot act on submissions outside the active group.
+  - New strings in all five language packs (en, es, pt_br, ca, fr) and a
+    `tests/group_helper_test.php` unit suite covering the visibility matrix.
+
 ## [v1.0.26-beta] — 2026-05-17
 
 ### Fixed

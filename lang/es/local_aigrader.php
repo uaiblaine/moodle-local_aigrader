@@ -84,6 +84,10 @@ $string['manage_heading']           = 'AI Grader Pro: {$a}';
 $string['manage_disabled']          = 'AI Grader Pro no esta habilitado en esta tarea. Edita la configuracion de la tarea para activarlo.';
 $string['manage_no_submissions']    = 'Aun no hay entregas para esta tarea.';
 $string['manage_polling']           = 'Una calificacion esta en proceso. Esta pagina se actualizara automaticamente.';
+// Group mode support on the manage screen.
+$string['manage_group_locked']      = 'No perteneces a ningun grupo en esta actividad, por lo que no hay entregas que puedas calificar aqui. Pide a un profesor o administrador que te anada a un grupo.';
+$string['manage_group_denied']      = 'No puedes calificar a este estudiante porque no pertenece al grupo que tienes seleccionado.';
+$string['manage_no_submissions_group'] = 'Aun no hay entregas para el grupo seleccionado.';
 $string['manage_back_to_assignment'] = '← Volver a la tarea';
 $string['msg_enqueued']             = 'Tarea de calificacion IA encolada. Se ejecutara en el proximo cron.';
 $string['msg_graded_now']           = 'Calificacion IA completada. Pulsa Revisar → para ver la propuesta.';

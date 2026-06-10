@@ -82,6 +82,10 @@ $string['manage_heading']           = 'AI Grader Pro : {$a}';
 $string['manage_disabled']          = 'AI Grader Pro n\'est pas activé sur ce devoir. Modifiez la configuration du devoir pour l\'activer.';
 $string['manage_no_submissions']    = 'Il n\'y a pas encore de remises pour ce devoir.';
 $string['manage_polling']           = 'Une évaluation est en cours. Cette page se rafraîchira automatiquement.';
+// Group mode support on the manage screen.
+$string['manage_group_locked']      = 'Vous n\'appartenez à aucun groupe dans cette activité ; il n\'y a donc aucune remise que vous puissiez évaluer ici. Demandez à un enseignant ou à un administrateur de vous ajouter à un groupe.';
+$string['manage_group_denied']      = 'Vous ne pouvez pas évaluer cet étudiant car il ne fait pas partie du groupe actuellement sélectionné.';
+$string['manage_no_submissions_group'] = 'Il n\'y a pas encore de remises pour le groupe sélectionné.';
 $string['manage_back_to_assignment'] = '← Retour au devoir';
 $string['msg_enqueued']             = 'Tâche d\'évaluation IA mise en file. Elle s\'exécutera au prochain cron.';
 $string['msg_graded_now']           = 'Évaluation IA terminée. Cliquez sur Réviser pour voir la proposition.';

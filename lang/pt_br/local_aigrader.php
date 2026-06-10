@@ -82,6 +82,10 @@ $string['manage_heading']           = 'AI Grader Pro: {$a}';
 $string['manage_disabled']          = 'AI Grader Pro não está habilitado nesta tarefa. Edite a configuração da tarefa para ativá-lo.';
 $string['manage_no_submissions']    = 'Ainda não há envios para esta tarefa.';
 $string['manage_polling']           = 'Uma avaliação está em andamento. Esta página será atualizada automaticamente.';
+// Group mode support on the manage screen.
+$string['manage_group_locked']      = 'Você não pertence a nenhum grupo nesta atividade, portanto não há envios que você possa avaliar aqui. Peça a um professor ou administrador para adicioná-lo a um grupo.';
+$string['manage_group_denied']      = 'Você não pode avaliar este estudante porque ele não está no grupo que você selecionou.';
+$string['manage_no_submissions_group'] = 'Ainda não há envios para o grupo selecionado.';
 $string['manage_back_to_assignment'] = '← Voltar à tarefa';
 $string['msg_enqueued']             = 'Tarefa de avaliação por IA enfileirada. Será executada no próximo cron.';
 $string['msg_graded_now']           = 'Avaliação por IA concluída. Clique em Revisar para ver a proposta.';

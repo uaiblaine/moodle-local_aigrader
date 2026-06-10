@@ -84,6 +84,10 @@ $string['manage_heading']           = 'AI Grader Pro: {$a}';
 $string['manage_disabled']          = 'AI Grader Pro is not enabled on this assignment. Edit the assignment settings to enable it.';
 $string['manage_no_submissions']    = 'No submitted assignments yet for this task.';
 $string['manage_polling']           = 'A grading task is in progress. This page will refresh automatically.';
+// Group mode support on the manage screen.
+$string['manage_group_locked']      = 'You do not belong to any group in this activity, so there are no submissions you can grade here. Ask a teacher or administrator to add you to a group.';
+$string['manage_group_denied']      = 'You cannot grade this student because they are not in your currently selected group.';
+$string['manage_no_submissions_group'] = 'No submitted assignments yet for the selected group.';
 $string['manage_back_to_assignment'] = '← Back to the assignment';
 $string['msg_enqueued']             = 'AI grading task enqueued. It will run on the next cron tick.';
 $string['msg_graded_now']           = 'AI grading completed. Open Revisar → to review the proposal.';

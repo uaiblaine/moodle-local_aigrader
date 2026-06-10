@@ -82,6 +82,10 @@ $string['manage_heading']           = 'AI Grader Pro: {$a}';
 $string['manage_disabled']          = 'AI Grader Pro no està habilitat en aquesta tasca. Edita la configuració de la tasca per activar-lo.';
 $string['manage_no_submissions']    = 'Encara no hi ha lliuraments per a aquesta tasca.';
 $string['manage_polling']           = 'Una qualificació està en curs. Aquesta pàgina s\'actualitzarà automàticament.';
+// Group mode support on the manage screen.
+$string['manage_group_locked']      = 'No pertanyeu a cap grup d\'aquesta activitat, de manera que no hi ha lliuraments que pugueu qualificar aquí. Demaneu a un professor o administrador que us afegeixi a un grup.';
+$string['manage_group_denied']      = 'No podeu qualificar aquest estudiant perquè no pertany al grup que teniu seleccionat.';
+$string['manage_no_submissions_group'] = 'Encara no hi ha lliuraments per al grup seleccionat.';
 $string['manage_back_to_assignment'] = '← Torna a la tasca';
 $string['msg_enqueued']             = 'Tasca de qualificació IA encolada. S\'executarà al pròxim cron.';
 $string['msg_graded_now']           = 'Qualificació IA completada. Prem Revisar per veure la proposta.';

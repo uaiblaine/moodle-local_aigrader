@@ -37,6 +37,7 @@ require(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
 use local_aigrader\bulk\dispatcher;
+use local_aigrader\local\group_helper;
 
 $cmid    = required_param('cmid', PARAM_INT);
 $action  = required_param('action', PARAM_ALPHANUMEXT);
@@ -67,6 +68,24 @@ if (empty($ids)) {
 
 $assign = $DB->get_record('assign', ['id' => $cm->instance], '*', MUST_EXIST);
 
+// Group boundary. A teacher confined to separate groups must not be able to
+// bulk-act on submissions outside their active group. Resolve the group
+// read-only (update=false — a POST must never change the active group), lock
+// out a teacher who belongs to no group, and otherwise splice a members-join
+// into the row loader below so out-of-group ids simply never come back and
+// classify()/execute() never see them.
+$groupstate = group_helper::resolve($cm, $course, $context, false);
+if ($groupstate->lockedout) {
+    redirect(
+        $manageurl,
+        get_string('manage_group_locked', 'local_aigrader'),
+        null,
+        \core\output\notification::NOTIFY_WARNING
+    );
+}
+$groupjoin  = group_helper::members_join($groupstate, 's.userid', $context);
+$groupwhere = $groupjoin->wheres !== '' ? " AND ({$groupjoin->wheres})" : '';
+
 // Load each selected row WITH its current AI grader status. Strict filter on
 // assignment id so a tampered POST cannot trigger work on submissions that
 // belong to a different assignment.
@@ -80,9 +99,11 @@ $rows = $DB->get_records_sql(
             ag.proposed_grade
      FROM   {assign_submission} s
      LEFT JOIN {local_aigrader_submission} ag ON ag.submissionid = s.id
+            {$groupjoin->joins}
      WHERE  s.assignment = :assignid
-       AND  s.id $insql",
-    $params
+       AND  s.id $insql
+            {$groupwhere}",
+    array_merge($params, $groupjoin->params)
 );
 // Re-key by submissionid for easy lookup downstream.
 $rowsbyid = [];
