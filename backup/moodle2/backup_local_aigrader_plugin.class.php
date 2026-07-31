@@ -38,8 +38,6 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Provides the backup steps for local_aigrader when inside a mod_assign
  * backup task.
@@ -58,7 +56,10 @@ class backup_local_aigrader_plugin extends backup_local_plugin {
      */
     protected function define_module_plugin_structure() {
         // Only act on mod_assign — every other module type is irrelevant.
-        if ($this->connectionpoint->get_element()->get_name() !== 'assign') {
+        // Note: $this->connectionpoint is a plain string ('module') at this
+        // stage; the module name lives on the backup_activity_task, exactly
+        // as the paired restore class reads it.
+        if ($this->task->get_modulename() !== 'assign') {
             return null;
         }
 
@@ -87,11 +88,12 @@ class backup_local_aigrader_plugin extends backup_local_plugin {
         $wrapper->add_child($config);
 
         // Source: pull the single row whose assignid matches the assign being
-        // backed up. backup::VAR_PARENTID is the assign.id at this point in
-        // the traversal tree.
+        // backed up. backup::VAR_ACTIVITYID resolves to the assign instance id;
+        // VAR_PARENTID would be the <module> element id (the cmid), which never
+        // matches local_aigrader_assign.assignid and silently backs up nothing.
         $config->set_source_table(
             'local_aigrader_assign',
-            ['assignid' => backup::VAR_PARENTID]
+            ['assignid' => backup::VAR_ACTIVITYID]
         );
 
         // The `usermodified` column holds a user.id of the teacher who last

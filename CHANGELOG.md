@@ -5,6 +5,39 @@ here. The format follows [Keep a Changelog](https://keepachangelog.com/),
 versions follow Moodle's `YYYYMMDDXX` plugin-version convention with a
 parallel semantic-style release name.
 
+## [v1.0.28-beta] — 2026-07-31
+
+### Fixed
+
+- **Fatal error on every course backup containing an activity** —
+  `backup_local_aigrader_plugin::define_module_plugin_structure()` called
+  `get_element()` on `$this->connectionpoint`, which is a plain string at
+  that stage. The backup engine invokes this class for every module of
+  every backup, so any course backup with at least one activity died with
+  "Call to a member function get_element() on string". The module-type
+  guard now reads `$this->task->get_modulename()`, mirroring the paired
+  restore class.
+- **Per-assignment configuration was silently missing from backups** — the
+  source-table condition used `backup::VAR_PARENTID`, which resolves to the
+  `<module>` element id (the course-module id), never matching
+  `local_aigrader_assign.assignid`. Now uses `backup::VAR_ACTIVITYID` (the
+  assign instance id), matching what the restore side rebinds via
+  `get_activityid()`.
+- **Restored configuration bound to the wrong assign** — the restore plugin
+  wrote the row at module.xml processing time, before the activity structure
+  step creates the new assign instance, so `get_activityid()` still referenced
+  the old activity (on a same-site duplicate this overwrote the SOURCE
+  assignment's configuration). Rows are now stashed during processing and
+  written in `after_restore_module()`, which the restore plan launches after
+  the whole task has executed.
+
+### Added
+
+- Regression test `tests/backup/duplicate_test.php`: drives a real
+  `duplicate_module()` backup-and-restore cycle for an assign (config must
+  travel to the new instance, source untouched) and for a forum (the plugin
+  must skip quietly — the path that used to fatal).
+
 ## [v1.0.27-beta] — 2026-06-10
 
 ### Added

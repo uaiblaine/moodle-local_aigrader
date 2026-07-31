@@ -27,8 +27,6 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Provides the restore steps for local_aigrader when inside a mod_assign
  * restore task.
@@ -55,55 +53,71 @@ class restore_local_aigrader_plugin extends restore_local_plugin {
         return $paths;
     }
 
+    /** @var array Rows stashed at process time, written in after_restore_module(). */
+    protected $stashedconfigs = [];
+
     /**
-     * Process one `<aigrader_config>` element from the backup XML and
-     * insert it as a fresh row in local_aigrader_assign, bound to the new
-     * assignid that the assign restore task created.
+     * Stash one `<aigrader_config>` element from the backup XML.
+     *
+     * The module.xml structure step runs BEFORE the activity structure step
+     * creates the new assign instance, so at this point
+     * $this->task->get_activityid() does not yet reference the new assign.
+     * Writing here would bind the row to the wrong (old) instance — the row
+     * is therefore stashed and written in after_restore_module(), which the
+     * restore plan launches only after every step of the task has executed.
      *
      * @param array $data Decoded XML data for the element.
      */
     public function process_aigrader_config($data) {
+        $this->stashedconfigs[] = (array) $data;
+    }
+
+    /**
+     * Write the stashed configuration once the new assign instance exists,
+     * bound to the assignid the restore task created.
+     */
+    public function after_restore_module() {
         global $DB;
 
-        $data = (object) $data;
+        foreach ($this->stashedconfigs as $stashed) {
+            $data = (object) $stashed;
 
-        // The original `assignid` from the source site is meaningless on
-        // the destination. Bind to the assign that the restore task is
-        // currently creating.
-        $data->assignid = (int) $this->task->get_activityid();
+            // The original `assignid` from the source site is meaningless on
+            // the destination. Bind to the assign this task restored.
+            $data->assignid = (int) $this->task->get_activityid();
 
-        // Re-map the teacher who last edited the config. If the user does
-        // not exist on the destination site (cross-site restore without
-        // the user data option), get_mappingid returns false; in that
-        // case we fall back to the user performing the restore.
-        $mappeduser = $this->get_mappingid('user', $data->usermodified ?? 0);
-        if ($mappeduser) {
-            $data->usermodified = (int) $mappeduser;
-        } else {
-            global $USER;
-            $data->usermodified = (int) $USER->id;
+            // Re-map the teacher who last edited the config. If the user does
+            // not exist on the destination site (cross-site restore without
+            // the user data option), get_mappingid returns false; in that
+            // case we fall back to the user performing the restore.
+            $mappeduser = $this->get_mappingid('user', $data->usermodified ?? 0);
+            if ($mappeduser) {
+                $data->usermodified = (int) $mappeduser;
+            } else {
+                global $USER;
+                $data->usermodified = (int) $USER->id;
+            }
+
+            // Shift timestamps according to the restore's date offset (course
+            // start-date moved? these follow).
+            $data->timecreated  = $this->apply_date_offset($data->timecreated ?? 0);
+            $data->timemodified = $this->apply_date_offset($data->timemodified ?? 0);
+
+            // Drop the source-site `id` so DB autoincrement picks a new one.
+            unset($data->id);
+
+            // Defensive guard: if a config already exists for this assignid
+            // (possible when a coursemodule callback pre-created a row for
+            // the freshly restored assign), update in place instead of insert.
+            $existing = $DB->get_record('local_aigrader_assign', ['assignid' => $data->assignid]);
+            if ($existing) {
+                $data->id = $existing->id;
+                $DB->update_record('local_aigrader_assign', $data);
+                continue;
+            }
+
+            $DB->insert_record('local_aigrader_assign', $data);
         }
-
-        // Shift timestamps according to the restore's date offset (course
-        // start-date moved? these follow).
-        $data->timecreated  = $this->apply_date_offset($data->timecreated ?? 0);
-        $data->timemodified = $this->apply_date_offset($data->timemodified ?? 0);
-
-        // Drop the source-site `id` so DB autoincrement picks a new one.
-        unset($data->id);
-
-        // Defensive guard: if a config already exists for this assignid
-        // (rare but possible when the assign restore handler ran an
-        // assignment-edit-form save that triggered our coursemodule
-        // callbacks before the restore plugin step), update in place
-        // instead of insert.
-        $existing = $DB->get_record('local_aigrader_assign', ['assignid' => $data->assignid]);
-        if ($existing) {
-            $data->id = $existing->id;
-            $DB->update_record('local_aigrader_assign', $data);
-            return;
-        }
-
-        $DB->insert_record('local_aigrader_assign', $data);
+        $this->stashedconfigs = [];
     }
 }
